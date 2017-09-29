@@ -1,0 +1,41 @@
+{
+  "name": "html-typings",
+  "version": "1.0.0",
+  "description": "Generates typings for your HTML files",
+  "main": "app/index.js",
+  "scripts": {
+    "test": "tsc && test/test.js",
+    "build": "tsc"
+  },
+  "bin": {
+    "html-typings": "app/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SanderRonde/html-typings.git"
+  },
+  "keywords": [
+    "html",
+    "typescript",
+    "typings"
+  ],
+  "author": "Sander Ronde <awsdfgvhbjn@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/SanderRonde/html-typings/issues"
+  },
+  "homepage": "https://github.com/SanderRonde/html-typings#readme",
+  "dependencies": {
+    "argparse": "^1.0.9",
+    "glob": "^7.1.2",
+    "htmlparser2": "^3.9.2",
+    "is-glob": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/argparse": "^1.0.33",
+    "@types/es6-promise": "^0.0.33",
+    "@types/glob": "^5.0.32",
+    "@types/htmlparser2": "^3.7.31",
+    "@types/node": "^8.0.31"
+  }
+}
