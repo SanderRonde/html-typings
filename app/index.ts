@@ -100,8 +100,8 @@ function prettyify(str: string) {
 		return '{}';
 	}
 	str = str
-		.replace(/"((#|\.)?\w+)": ((\w|\|)+),/g, '\t"$1": $3,\n')
-		.replace(/"((#|\.)?\w+)": ((\w+|\|))},/g, '\t"$1": $3\n},\n')
+		.replace(/"((#|\.)?\w+)": ((\w|\|)+),/g, '"$1": $3,')
+		.replace(/"((#|\.)?\w+)": ((\w|\|)+)},/g, '"$1": $3\n},')
 		.replace(/"(\w+)":{/g, '"$1":{\n')
 		.replace(/\n},"/g, '\n},\n"')
 		.replace(/{\n}/g, '{ }')
@@ -109,8 +109,9 @@ function prettyify(str: string) {
 		.replace(/{"/g, '{\n"')
 		.replace(/:"{ }",/, ':{ },\n')
 		.replace(/,/g, ';')
+		.replace(/(\s+)\}/g, ';\n}')
 	const split = str.split('\n');
-	return `{\n${split[0].slice(1)}\n${split.slice(1, -1).join('\n')}\n\t${split.slice(-1)[0].slice(0, -1)};\n}`;
+	return split.join('\n');
 }
 
 function getTagType(name: string) {
@@ -311,7 +312,7 @@ function formatTypings(typings: {
 		[key: string]: string;
 	};
 }) {
-	return prettyify(stringToType(JSON.stringify(typings)))
+	return prettyify(stringToType(JSON.stringify(typings, null, '\t')))
 }
 
 function convertToDefsFile(typings: TypingsObj) {
@@ -466,7 +467,7 @@ export async function extractFileTypes(files: string|string[], getTypesObj = fal
 export async function extractFolderTypes(folder: string): Promise<string>;
 export async function extractFolderTypes(folder: string, getTypesObj: boolean): Promise<TypingsObj>;
 export async function extractFolderTypes(folder: string, getTypesObj = false): Promise<string|TypingsObj> {
-	const typings = await getTypingsForInput(folder + '*');
+	const typings = await getTypingsForInput(folder + '**/*');
 	return getTypesObj ? typings : convertToDefsFile(typings);
 }
 
