@@ -91,7 +91,7 @@ function doTest(name: Tests) {
 	if (testMaps[name].length === 1) {
 		//Skip single-file tests if there are multiple files or none
 		step('should be able to run the main process using string-only input', async () => {
-			results.string = extractStringTypes(await readFile(testMaps[name][0]));
+			results.string = await extractStringTypes(await readFile(testMaps[name][0]));
 		});
 	}
 	step('should be able to run the main process using folder input', async () => {
@@ -115,7 +115,7 @@ function doTest(name: Tests) {
 	});
 	it('results should be correct', async () => {
 		const expected = await readFile(path.join(__dirname, `./${name}/expected.d.ts`));
-		assert.equal(expected, results.glob, 'Results should match expected values');
+		assert.equal(results.glob, expected, 'Results should match expected values');
 	});
 	it('should compile without errors', async function() {
 		this.timeout(10000);
