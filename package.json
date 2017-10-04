@@ -4,7 +4,7 @@
   "description": "Generates typings for your HTML files",
   "main": "app/index.js",
   "scripts": {
-    "test": "tsc && mocha -i test/test.js -o test/test_output.txt",
+    "test": "tsc && mocha -i test/programmatic/test.js -o test/test_output.txt",
     "build": "tsc"
   },
   "bin": {

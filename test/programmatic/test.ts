@@ -1,4 +1,4 @@
-///<reference path="../typings/mocha-steps.d.ts"/>
+///<reference path="../../typings/mocha-steps.d.ts"/>
 
 require('mocha-steps');
 import fs = require('fs');
@@ -9,7 +9,7 @@ import * as ts from 'typescript';
 import { 
 	extractStringTypes, extractGlobTypes,
 	extractFileTypes, extractFolderTypes 
-} from '../app/index';
+} from '../../app/index';
 
 type Tests = 'dom-module'|'empty-file'|'multi'|'none'|'standard'|'nested';
 
