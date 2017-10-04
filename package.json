@@ -4,12 +4,16 @@
   "description": "Generates typings for your HTML files",
   "main": "app/index.js",
   "scripts": {
-    "test": "tsc && test/test.js",
+    "test": "tsc && mocha -i test/test.js -o test/test_output.txt",
     "build": "tsc"
   },
   "bin": {
     "html-typings": "app/index.js"
   },
+  "files": [
+    "app/index.js",
+    "typings/index.d.ts"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SanderRonde/html-typings.git"
@@ -27,15 +31,21 @@
   "homepage": "https://github.com/SanderRonde/html-typings#readme",
   "dependencies": {
     "argparse": "^1.0.9",
+    "chai": "^4.1.2",
     "glob": "^7.1.2",
     "htmlparser2": "^3.9.2",
-    "is-glob": "^4.0.0"
+    "typescript": "^2.5.3"
   },
   "devDependencies": {
     "@types/argparse": "^1.0.33",
+    "@types/chai": "^4.0.4",
     "@types/es6-promise": "^0.0.33",
     "@types/glob": "^5.0.32",
     "@types/htmlparser2": "^3.7.31",
-    "@types/node": "^8.0.31"
-  }
+    "@types/mocha": "^2.2.43",
+    "@types/node": "^8.0.31",
+    "mocha": "^3.5.3",
+    "mocha-steps": "^1.1.0"
+  },
+  "typings": "typings/html-typings.d.ts"
 }
