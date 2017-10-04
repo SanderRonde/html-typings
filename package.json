@@ -12,7 +12,7 @@
   },
   "files": [
     "app/index.js",
-    "typings/index.d.ts"
+    "typings/html-typings.d.ts"
   ],
   "repository": {
     "type": "git",
