@@ -99,7 +99,7 @@ namespace Files {
 					console.error('Error reading input', err);
 					process.exit(2);
 				} else {
-					const nonDirMatches = matches.filter(match => Util.endsWith(match, '/'));
+					const nonDirMatches = matches.filter(match => !Util.endsWith(match, '/'));
 					const htmlFileMatches = nonDirMatches.filter(match => Util.endsWith(match, '.html'));
 					resolve(htmlFileMatches);
 				}
