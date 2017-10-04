@@ -16,6 +16,10 @@ parser.addArgument(['-o', '--output'], {
 	help: 'The location to output the typings to',
 	required: true
 });
+parser.addArgument(['-w', '--watch'], {
+	help: 'Watch for HTML file changes',
+	action: 'storeTrue'
+});
 
 const args: {
 	input: string;
@@ -406,28 +410,7 @@ async function getTypingsForInput(input: string|string[]) {
 	}));
 }
 
-function outputExists(): Promise<void> {
-	return new Promise((resolve) => {
-
-		const outPath = getFilePath(args.output);
-		fs.stat(outPath, (err, stats) => {
-			if (err) {
-				console.error('Invalid output file');
-				process.exit(1);
-			} else {
-				if (stats.isDirectory()) {
-					console.log('Output file is directory');
-					process.exit(1);
-				} else {
-					resolve(null);
-				}
-			}
-		});
-	});
-}
-
 async function main() {
-	await outputExists();
 	const typings = await getTypingsForInput(args.input);
 	fs.writeFile(getFilePath(args.output), convertToDefsFile(typings), (err) => {
 		if (err) {
