@@ -23,11 +23,57 @@ namespace Input {
 		action: 'storeTrue'
 	});
 
-	export const args: {
+	export function parse(args?: string[]) {
+		args = parser.parseArgs(args);
+	}
+
+	export let args: {
 		input: string;
 		output: string;
 		watch: boolean;
-	} = parser.parseArgs();
+	};
+}
+
+namespace Logging {
+	let reroute: boolean = false;
+	let listeners: {
+		exit(code: number): void;
+		error(...args: any[]): void;
+		log(...args: any[]): void;
+	} = null;
+
+	export function handle(handlers: {
+		exit(code: number): void;
+		error(...args: any[]): void;
+		log(...args: any[]): void;
+	}) {
+		reroute = true;
+		listeners = handlers;
+	}
+
+	export function exit(code: number = 0) {
+		if (reroute) {
+			listeners.exit(code);
+		} else {
+			process.exit(code);
+		}
+	}
+
+	export function error(...args: any[]) {
+		if (reroute) {
+			listeners.error(...args);
+		} else {
+			console.error(...args);
+		}
+	}
+
+	export function log(...args: any[]) {
+		if (reroute) {
+			listeners.log(...args);
+		} else {
+			console.log(...args);
+		}
+	}
 }
 
 namespace Util {
@@ -83,6 +129,17 @@ namespace Util {
 	
 		return newObj;
 	}
+
+	export function sortObj<T extends {
+		[key: string]: any;
+	}>(obj: T): T {
+		const newObj: Partial<T> = {};
+		const keys = Object.getOwnPropertyNames(obj).sort();
+		keys.forEach((key) => {
+			newObj[key] = obj[key];
+		});
+		return newObj as T;
+	}
 }
 
 namespace Files {
@@ -96,8 +153,8 @@ namespace Files {
 				absolute: true
 			}, (err, matches) => {
 				if (err) {
-					console.error('Error reading input', err);
-					process.exit(2);
+					Logging.error('Error reading input', err);
+					Logging.exit(2);
 				} else {
 					const nonDirMatches = matches.filter(match => !Util.endsWith(match, '/'));
 					const htmlFileMatches = nonDirMatches.filter(match => Util.endsWith(match, '.html'));
@@ -120,8 +177,8 @@ namespace Files {
 				}
 				fs.readFile(input, 'utf8', (err, data) => {
 					if (err) {
-						console.error('Error reading input file(s)', err);
-						process.exit(2);
+						Logging.error('Error reading input file(s)', err);
+						Logging.exit(2);
 					} else {
 						fileMap[input] = data;
 						resolve(data);
@@ -381,7 +438,7 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 				return new Promise((resolve, reject) => {
 					fs.writeFile(Util.getFilePath(Input.args.output), Joining.convertToDefsFile(typings), (err) => {
 						if (err) {
-							console.error('Error writing to file');
+							Logging.error('Error writing to file');
 							reject(err);
 						} else {
 							resolve();
@@ -399,6 +456,7 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 				[key: string]: PartialTypingsObj;
 			} = {}) {
 				files = files || await Files.getInputFiles(input)
+				files = files.sort();
 				const toSkip = Object.getOwnPropertyNames(splitTypings);
 				const contentsMap = await Files.readInputFiles(files, toSkip);
 				return Util.objectForEach<string, PartialTypingsObj>(contentsMap, (fileContent) => {
@@ -466,15 +524,15 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 				} = {};
 			
 				Object.getOwnPropertyNames(allClassTypes).forEach((className: string) => {
-					selectorMap[`.${className}`] = allClassTypes[className].join('|');
-					joinedClassNames[className] = allClassTypes[className].join('|');
+					selectorMap[`.${className}`] = allClassTypes[className].sort().join('|');
+					joinedClassNames[className] = allClassTypes[className].sort().join('|');
 				});
 			
 				return {
-					selectors: selectorMap,
-					modules: moduleMap,
-					ids: idMap,
-					classes: joinedClassNames
+					selectors: Util.sortObj(selectorMap),
+					modules: Util.sortObj(moduleMap),
+					ids: Util.sortObj(idMap),
+					classes: Util.sortObj(joinedClassNames)
 				}
 			}
 
@@ -490,8 +548,8 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 function watchFiles(input: string, callback: (changedFile: string, files: string[]) => void) {
 	const gaze = new Gaze(input, {}, (err, watcher) => {
 		if (err) {
-			console.error(err);
-			process.exit(1);
+			Logging.error(err);
+			Logging.exit(1);
 		}
 	});
 
@@ -504,30 +562,47 @@ function watchFiles(input: string, callback: (changedFile: string, files: string
 				break;
 		}
 	});
+
+	return gaze;
 }
 
-async function main() {
-	if (Input.args.watch) {
-		let splitTypings: {
-			[key: string]: Main.Conversion.Extraction.PartialTypingsObj;
-		} = null;
-		watchFiles(Input.args.input, async (changedFile, files) => {
-			console.log('File(s) changed, re-generating typings for new file(s)');
-			delete splitTypings[changedFile];
-			splitTypings = await Main.Conversion.Extraction.getSplitTypings(Input.args.input, files, splitTypings);
-			const joinedTypes = Main.Conversion.Joining.mergeTypes(splitTypings);
-			Main.Conversion.Extraction.writeToOutput(joinedTypes).then(() => {
-				console.log('Generated typings');
-			}).catch((err) => {
-				process.exit(1);
+function main() {
+	let close: () => void = null;
+	new Promise(async (resolve) => {
+		let watcher: Gaze = null;
+		close = () => {
+			watcher && watcher.close();
+			Logging.exit(0);
+		}
+		if (Input.args.watch) {
+			let splitTypings: {
+				[key: string]: Main.Conversion.Extraction.PartialTypingsObj;
+			} = null;
+			watcher = watchFiles(Input.args.input, async (changedFile, files) => {
+				Logging.log('File(s) changed, re-generating typings for new file(s)');
+				delete splitTypings[changedFile];
+				splitTypings = await Main.Conversion.Extraction.getSplitTypings(Input.args.input, files, splitTypings);
+				const joinedTypes = Main.Conversion.Joining.mergeTypes(splitTypings);
+				Main.Conversion.Extraction.writeToOutput(joinedTypes).then(() => {
+					Logging.log('Generated typings');
+				}).catch((err) => {
+					Logging.exit(1);
+					resolve();
+				});
+			});	
+		} else {
+			Main.Conversion.Extraction.extractTypes().then(() => {
+				Logging.exit(0);
+				resolve();
+			}).catch(() => {
+				Logging.exit(1);
+				resolve();
 			});
-		});	
-	} else {
-		Main.Conversion.Extraction.extractTypes().then(() => {
-			process.exit(0);
-		}).catch(() => {
-			process.exit(1);
-		});
+		}
+	});
+
+	return () => {
+		close();
 	}
 }
 
@@ -578,7 +653,70 @@ export async function extractFolderTypes(folder: string, getTypesObj = false): P
 	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings);
 }
 
+function addToHandlers<T extends {
+	[key: string]: P[]
+}, P>(handlers: T, event: 'exit'|'error'|'log', handler: P) {
+	if (event === 'exit' || event === 'error' || event === 'log') {
+		if (event === 'exit') {
+			handlers[event].push(handler);
+		} else {
+			handlers[event].push(handler);
+		}
+	}
+}
+
+export function cli(args: string[]): {
+	on(event: 'exit', handler: (exitCode: number) => void): void;
+	on(event: 'error', handler: (...args: any[]) => void): void;
+	on(event: 'log', handler: (...args: any[]) => void): void;
+	addEventListener(event: 'exit', handler: (exitCode: number) => void): void;
+	addEventListener(event: 'error', handler: (...args: any[]) => void): void;
+	addEventListener(event: 'log', handler: (...args: any[]) => void): void;
+	quit(): void;
+} {
+	const handlers: {
+		exit: ((code: number) => void)[];
+		error: ((...args: any[]) => void)[];
+		log: ((...args: any[]) => void)[];
+	} = {
+		exit: [],
+		error: [],
+		log: []
+	}
+	Logging.handle({
+		exit(code) {
+			handlers.exit.forEach((handler) => {
+				handler(code);
+			});
+		},
+		error(...args: any[]) {
+			handlers.error.forEach((handler) => {
+				handler(...args);
+			});
+		},
+		log(...args: any[]) {
+			handlers.log.forEach((handler) => {
+				handler(...args);
+			});
+		}
+	});
+	Input.parse(args);
+	const close = main();
+	return {
+		on(event: 'exit'|'error'|'log', handler: (...args: any[]) => void) {
+			addToHandlers(handlers, event, handler);
+		},
+		addEventListener(event: 'exit'|'error'|'log', handler: (...args: any[]) => void) {
+			addToHandlers(handlers, event, handler);
+		},
+		quit() {
+			close();
+		}
+	}
+}
+
 if (require.main === module) {
 	//Called via command-line
+	Input.parse();
 	main();
 }

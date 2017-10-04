@@ -8,15 +8,15 @@ import { assert } from 'chai';
 import * as ts from 'typescript';
 import { 
 	extractStringTypes, extractGlobTypes,
-	extractFileTypes, extractFolderTypes 
+	extractFileTypes, extractFolderTypes
 } from '../../app/index';
 
 type Tests = 'dom-module'|'empty-file'|'multi'|'none'|'standard'|'nested';
 
 function getFilesInDir(dirName: Tests): string[] {
-	return glob.sync(`./test/${dirName}/**/*.html`, {
+	return glob.sync(`./test/programmatic/${dirName}/**/*.html`, {
 		absolute: true
-	});
+	}).sort();
 }
 
 function readFile(filePath: string): Promise<string> {
@@ -86,7 +86,7 @@ function doTest(name: Tests) {
 	} = {};
 	step('should be able to run the main process without errors', async function () {
 		this.slow(100);
-		results.glob = await extractGlobTypes(`./test/${name}/**/*.html`);
+		results.glob = await extractGlobTypes(`./test/programmatic/${name}/**/*.html`);
 	});
 	if (testMaps[name].length === 1) {
 		//Skip single-file tests if there are multiple files or none
@@ -98,9 +98,7 @@ function doTest(name: Tests) {
 		results.folder = await extractFolderTypes(path.join(__dirname, `./${name}/`));
 	});
 	step('should be able to run the main process using file-only input', async () => {
-		results.file = await extractFileTypes(testMaps[name].map((file) => {
-			return file;
-		}));
+		results.file = await extractFileTypes(testMaps[name]);
 	});
 
 	it('should have produced the same results for all input methods', () => {
@@ -130,11 +128,13 @@ function setupTest(name: Tests) {
 	});
 }
 
-describe('Tests', () => {
-	setupTest('standard');	
-	setupTest('none');
-	setupTest('empty-file');
-	setupTest('dom-module');
-	setupTest('multi');
-	setupTest('nested');
-});
+export function programmaticTests() {
+	describe('Programmatic', () => {
+		setupTest('standard');	
+		setupTest('none');
+		setupTest('empty-file');
+		setupTest('dom-module');
+		setupTest('multi');
+		setupTest('nested');
+	});
+}
