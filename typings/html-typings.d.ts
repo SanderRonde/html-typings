@@ -59,4 +59,20 @@ declare module 'html-typings' {
 	 */
 	export function extractFolderTypes(folder: string): Promise<string>;
 	export function extractFolderTypes(folder: string, getTypesObj: boolean): Promise<TypingsObj>;
+
+	/**
+	 * A way to use the CLI programmatically, not recommended for use
+	 * 
+	 * @param {string[]} args - The arguments to pass along
+	 * @returns {Object} - An object containing an 'on' and 'addEventListener' property
+	 * 		in order to listen to the 'exit', 'error' and 'log' events
+	 */
+	export function cli(args: string[]): {
+		on(event: 'exit', handler: (exitCode: number) => void): void;
+		on(event: 'error', handler: (...args: any[]) => void): void;
+		on(event: 'log', handler: (...args: any[]) => void): void;
+		addEventListener(event: 'exit', handler: (exitCode: number) => void): void;
+		addEventListener(event: 'error', handler: (...args: any[]) => void): void;
+		addEventListener(event: 'log', handler: (...args: any[]) => void): void;
+	};
 }

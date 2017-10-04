@@ -15,18 +15,20 @@ declare namespace Gaze {
 		close(): void;
 		add(patterns: string|string[], callback: (err: Error|void, watcher: Gaze) => void): void;
 		remove(filePath: string): void;
-		watched(): string[];
+		watched(): {
+			[key: string]: string[];
+		};
 		relative(dir?: string, unixify?: boolean): string[];
 
-		addEventListener(event: 'ready', callback: (watcher: Gaze) => void): void;
-		addEventListener(event: 'all', callback: (event: 'added'|'changed'|'renamed'|'deleted', filePath: string) => void): void;
-		addEventListener(event: 'added', callback: (filePath: string) => void): void;
-		addEventListener(event: 'changed', callback: (filePath: string) => void): void;
-		addEventListener(event: 'deleted', callback: (filePath: string) => void): void;
-		addEventListener(event: 'renamed', callback: (newPath: string, oldPath: string) => void): void;
-		addEventListener(event: 'end', callback: () => void): void;
-		addEventListener(event: 'error', callback: (err: Error) => void): void;
-		addEventListener(event: 'nomatch', callback: () => void): void;
+		on(event: 'ready', callback: (watcher: Gaze) => void): void;
+		on(event: 'all', callback: (event: 'added'|'changed'|'renamed'|'deleted', filePath: string) => void): void;
+		on(event: 'added', callback: (filePath: string) => void): void;
+		on(event: 'changed', callback: (filePath: string) => void): void;
+		on(event: 'deleted', callback: (filePath: string) => void): void;
+		on(event: 'renamed', callback: (newPath: string, oldPath: string) => void): void;
+		on(event: 'end', callback: () => void): void;
+		on(event: 'error', callback: (err: Error) => void): void;
+		on(event: 'nomatch', callback: () => void): void;
 	}
 }
 

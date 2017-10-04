@@ -8,8 +8,9 @@ import { Gaze }  from 'gaze';
 namespace Input {
 	const parser = new ArgumentParser({
 		addHelp: true,
-		description: 'Generates typings for your HTML files'
-	});
+		description: 'Generates typings for your HTML files',
+		debug: !!process.env.DEBUG_HTML_TYPINGS
+	} as any);
 	parser.addArgument(['-i', '--input'], {
 		help: 'The path to a single file, a folder, or a glob pattern',
 		required: true
@@ -23,8 +24,8 @@ namespace Input {
 		action: 'storeTrue'
 	});
 
-	export function parse(args?: string[]) {
-		args = parser.parseArgs(args);
+	export function parse(programArgs?: string[]) {
+		args = parser.parseArgs(programArgs);
 	}
 
 	export let args: {
@@ -55,7 +56,7 @@ namespace Logging {
 		if (reroute) {
 			listeners.exit(code);
 		} else {
-			process.exit(code);
+			listeners.exit(code);
 		}
 	}
 
@@ -63,7 +64,7 @@ namespace Logging {
 		if (reroute) {
 			listeners.error(...args);
 		} else {
-			console.error(...args);
+			listeners.error(...args);
 		}
 	}
 
@@ -441,6 +442,9 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 							Logging.error('Error writing to file');
 							reject(err);
 						} else {
+							if (!Input.args.watch) {
+								Logging.log('Output to', Util.getFilePath(Input.args.output));
+							}
 							resolve();
 						}
 					});
@@ -553,17 +557,43 @@ function watchFiles(input: string, callback: (changedFile: string, files: string
 		}
 	});
 
-	gaze.addEventListener('all', (event, filePath) => {
+	gaze.on('all', (event, filePath) => {
 		switch (event) {
 			case 'added':
 			case 'changed':
 			case 'deleted':
-				callback(filePath, gaze.watched());
+				callback(filePath, getWatched(gaze));
 				break;
 		}
 	});
 
 	return gaze;
+}
+
+async function doWatchCompilation(files: string[], previousTypings: {
+	[key: string]: Main.Conversion.Extraction.PartialTypingsObj;
+}, done: () => void) {
+	const splitTypings = await Main.Conversion.Extraction.getSplitTypings(Input.args.input, files, previousTypings);
+	const joinedTypes = Main.Conversion.Joining.mergeTypes(splitTypings);
+	Main.Conversion.Extraction.writeToOutput(joinedTypes).then(() => {
+		Logging.log('Generated typings');
+	}).catch((err) => {
+		Logging.exit(1);
+		done();
+	});
+	return splitTypings;
+}
+
+function getWatched(watcher: Gaze): string[] {
+	const watched = watcher.watched();
+	const keys = Object.getOwnPropertyNames(watched);
+	let files: string[] = [];
+	for (let i = 0; i < keys.length; i++) {
+		files = [...files, ...watched[keys[i]]]
+	}
+	return files.filter((file) => {
+		return file && Util.endsWith(file, '.html');
+	});
 }
 
 function main() {
@@ -578,18 +608,19 @@ function main() {
 			let splitTypings: {
 				[key: string]: Main.Conversion.Extraction.PartialTypingsObj;
 			} = null;
-			watcher = watchFiles(Input.args.input, async (changedFile, files) => {
+			let input = Input.args.input;
+			if (Util.endsWith(Input.args.input, '/') || 
+				Util.endsWith(Input.args.input, '\\')) {
+					input = input + '**/*.*';
+				} else if (Input.args.input.split(/\\\//).slice(-1)[0].indexOf('.') === -1) {
+					input = input + '/**/*.*';
+				}
+			watcher = watchFiles(input, async (changedFile, files) => {
 				Logging.log('File(s) changed, re-generating typings for new file(s)');
 				delete splitTypings[changedFile];
-				splitTypings = await Main.Conversion.Extraction.getSplitTypings(Input.args.input, files, splitTypings);
-				const joinedTypes = Main.Conversion.Joining.mergeTypes(splitTypings);
-				Main.Conversion.Extraction.writeToOutput(joinedTypes).then(() => {
-					Logging.log('Generated typings');
-				}).catch((err) => {
-					Logging.exit(1);
-					resolve();
-				});
+				splitTypings = await doWatchCompilation(files, splitTypings, resolve);
 			});	
+			splitTypings = await doWatchCompilation(getWatched(watcher), {}, resolve)
 		} else {
 			Main.Conversion.Extraction.extractTypes().then(() => {
 				Logging.exit(0);
