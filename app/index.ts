@@ -16,10 +16,6 @@ parser.addArgument(['-o', '--output'], {
 	help: 'The location to output the typings to',
 	required: true
 });
-parser.addArgument(['-d', '--dom-module'], {
-	help: 'Splits dom-modules into their own subsection',
-	action: 'storeTrue'
-});
 
 const args: {
 	input: string;
