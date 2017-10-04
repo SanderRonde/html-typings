@@ -20,6 +20,6 @@
     "compileOnSave": true,
     "include": [
 		"app/",
-		"test/"
+		"test/test.ts"
     ]
 }
