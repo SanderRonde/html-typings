@@ -397,7 +397,7 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 
 			export async function getSplitTypings(input: string|string[], files?: string[], splitTypings: {
 				[key: string]: PartialTypingsObj;
-			} = null) {
+			} = {}) {
 				files = files || await Files.getInputFiles(input)
 				const toSkip = Object.getOwnPropertyNames(splitTypings);
 				const contentsMap = await Files.readInputFiles(files, toSkip);
