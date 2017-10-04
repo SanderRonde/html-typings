@@ -7,7 +7,7 @@ interface SelectorMap {
 	"#test7": HTMLDivElement;
 	"#test8": HTMLDivElement;
 	"#test9": HTMLDivElement;
-	".test4": HTMLDivElement|HTMLSpanElement|HTMLAudioElement|HTMLInputElement|HTMLFormElement|HTMLElement;
+	".test4": HTMLAudioElement|HTMLDivElement|HTMLElement|HTMLFormElement|HTMLInputElement|HTMLSpanElement;
 }
 
 interface IDMap {
@@ -22,7 +22,7 @@ interface IDMap {
 }
 
 interface ClassMap {
-	"test4": HTMLDivElement|HTMLSpanElement|HTMLAudioElement|HTMLInputElement|HTMLFormElement|HTMLElement;
+	"test4": HTMLAudioElement|HTMLDivElement|HTMLElement|HTMLFormElement|HTMLInputElement|HTMLSpanElement;
 }
 
 interface ModuleMap {}
