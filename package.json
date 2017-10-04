@@ -32,6 +32,7 @@
   "dependencies": {
     "argparse": "^1.0.9",
     "chai": "^4.1.2",
+    "gaze": "^1.1.2",
     "glob": "^7.1.2",
     "htmlparser2": "^3.9.2",
     "typescript": "^2.5.3"

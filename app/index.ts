@@ -3,6 +3,7 @@ import path = require('path');
 import { Parser } from 'htmlparser2';
 import { Glob } from 'glob';
 import fs = require('fs');
+import { Gaze }  from 'gaze';
 
 const parser = new ArgumentParser({
 	addHelp: true,
@@ -24,6 +25,7 @@ parser.addArgument(['-w', '--watch'], {
 const args: {
 	input: string;
 	output: string;
+	watch: boolean;
 } = parser.parseArgs();
 
 function getFilePath(filePath: string): string {
@@ -31,6 +33,10 @@ function getFilePath(filePath: string): string {
 		return filePath;
 	}
 	return path.join(process.cwd().trim(), filePath.trim());
+}
+
+function endsWith(str: string, end: string): boolean {
+	return str.lastIndexOf(end) === str.length - end.length;
 }
 
 function getInputFiles(files: string|string[]): Promise<string[]> {
@@ -46,8 +52,8 @@ function getInputFiles(files: string|string[]): Promise<string[]> {
 				console.error('Error reading input', err);
 				process.exit(2);
 			} else {
-				const nonDirMatches = matches.filter(match => match.lastIndexOf('/') !== match.length - 1);
-				const htmlFileMatches = nonDirMatches.filter(match => match.lastIndexOf('.html') === match.length - 5);
+				const nonDirMatches = matches.filter(match => endsWith(match, '/'));
+				const htmlFileMatches = nonDirMatches.filter(match => endsWith(match, '.html'));
 				resolve(htmlFileMatches);
 			}
 		});
@@ -402,24 +408,64 @@ function mergeTypes(types: {
 	}
 }
 
-async function getTypingsForInput(input: string|string[]) {
-	const files = await getInputFiles(input);
+async function getTypingsForInput(input: string|string[], files?: string[]) {
+	files = files || await getInputFiles(input)
 	const contents = await readInputFiles(files);
 	return mergeTypes(contents.map((fileContent) => {
 		return getTypings(fileContent);
 	}));
 }
 
-async function main() {
-	const typings = await getTypingsForInput(args.input);
-	fs.writeFile(getFilePath(args.output), convertToDefsFile(typings), (err) => {
+async function extractTypes(files?: string[]) {
+	return new Promise(async (resolve, reject) => {
+		const typings = await getTypingsForInput(args.input, files);
+		fs.writeFile(getFilePath(args.output), convertToDefsFile(typings), (err) => {
+			if (err) {
+				console.error('Error writing to file');
+				reject(err);
+			} else {
+				resolve();
+			}
+		});
+	});
+}
+
+function watchFiles(input: string, callback: (changedFile: string, files: string[]) => void) {
+	const gaze = new Gaze(input, {}, (err, watcher) => {
 		if (err) {
-			console.error('Error writing to file');
+			console.error(err);
 			process.exit(1);
-		} else {
-			process.exit(0);
 		}
 	});
+
+	gaze.addEventListener('all', (event, filePath) => {
+		switch (event) {
+			case 'added':
+			case 'changed':
+			case 'deleted':
+				callback(filePath, gaze.watched());
+				break;
+		}
+	});
+}
+
+async function main() {
+	if (args.watch) {
+		watchFiles(args.input, (changedFile, files) => {
+			console.log('File(s) changed, re-generating typings');
+			extractTypes(files).then(() => {
+				console.log('Generated typings');
+			}).catch((err) => {
+				process.exit(1);
+			});
+		});	
+	} else {
+		extractTypes().then(() => {
+			process.exit(0);
+		}).catch(() => {
+			process.exit(1);
+		});
+	}
 }
 
 export function extractStringTypes(fileContents: string): string;
