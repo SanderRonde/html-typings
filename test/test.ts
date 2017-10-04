@@ -91,7 +91,7 @@ function doTest(name: Tests) {
 	if (testMaps[name].length === 1) {
 		//Skip single-file tests if there are multiple files or none
 		step('should be able to run the main process using string-only input', async () => {
-			results.string = await extractStringTypes(await readFile(testMaps[name][0]));
+			results.string = extractStringTypes(await readFile(testMaps[name][0]));
 		});
 	}
 	step('should be able to run the main process using folder input', async () => {
