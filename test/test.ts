@@ -86,7 +86,7 @@ function doTest(name: Tests) {
 	} = {};
 	step('should be able to run the main process without errors', async function () {
 		this.slow(100);
-		results.glob = await extractGlobTypes(`./test/${name}/*.html`);
+		results.glob = await extractGlobTypes(`./test/${name}/**/*.html`);
 	});
 	if (testMaps[name].length === 1) {
 		//Skip single-file tests if there are multiple files or none
@@ -132,8 +132,9 @@ function setupTest(name: Tests) {
 
 describe('Tests', () => {
 	setupTest('standard');	
-	// setupTest('none');
-	// setupTest('empty-file');
-	// setupTest('dom-module');
-	// setupTest('multi');
+	setupTest('none');
+	setupTest('empty-file');
+	setupTest('dom-module');
+	setupTest('multi');
+	setupTest('nested');
 });
