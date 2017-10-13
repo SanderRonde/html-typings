@@ -31,7 +31,6 @@
   "homepage": "https://github.com/SanderRonde/html-typings#readme",
   "dependencies": {
     "argparse": "^1.0.9",
-    "chai": "^4.1.2",
     "gaze": "^1.1.2",
     "glob": "^7.1.2",
     "htmlparser2": "^3.9.2",
@@ -45,6 +44,7 @@
     "@types/htmlparser2": "^3.7.31",
     "@types/mocha": "^2.2.43",
     "@types/node": "^8.0.31",
+    "chai": "^4.1.2",
     "mocha": "^3.5.3",
     "mocha-steps": "^1.1.0"
   },
