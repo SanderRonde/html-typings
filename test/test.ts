@@ -1,7 +1,7 @@
-///import { programmaticTests } from './programmatic/test'
+import { programmaticTests } from './programmatic/test'
 import { cliTests } from './cli/test';
 
 describe('HTMLTypings', () => {
-	//programmaticTests();
+	programmaticTests();
 	cliTests();
 });
