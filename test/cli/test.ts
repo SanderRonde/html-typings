@@ -2,8 +2,6 @@
 
 require('mocha-steps');
 
-process.env.DEBUG_HTML_TYPINGS = 'true';
-
 import { cli } from '../../app/index';
 import { assert } from 'chai';
 import fs = require('fs');
