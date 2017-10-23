@@ -8,7 +8,9 @@ before_install:
 - npm install typescript -g
 install:
 - npm install
-script: npm test
+script:
+- npm test
+- tsc
 notifications:
   email:
     on_success: change
