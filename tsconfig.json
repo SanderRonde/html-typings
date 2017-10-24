@@ -20,6 +20,7 @@
     "compileOnSave": true,
     "include": [
 		"app/",
-		"test/test.ts"
+        "test/test.ts",
+        "tasks/html-typings.ts"
     ]
 }
