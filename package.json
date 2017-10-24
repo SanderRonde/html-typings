@@ -12,6 +12,7 @@
   },
   "files": [
     "app/index.js",
+    "tasks/html-typings.js",
     "typings/html-typings.d.ts"
   ],
   "repository": {
