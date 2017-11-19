@@ -21,6 +21,7 @@
     "include": [
 		"app/",
         "test/test.ts",
+        "docs/assets/js/js.ts",
         "tasks/html-typings.ts"
     ]
 }
