@@ -4,8 +4,8 @@
   "description": "Generates typings for your HTML files",
   "main": "app/index.js",
   "scripts": {
-    "test": "tsc && mocha -i test/test.js -o test/test_output.txt",
-    "build": "tsc"
+    "test": "grunt genDefs && tsc && mocha -i test/test.js -o test/test_output.txt",
+    "build": "grunt genDefs && tsc"
   },
   "bin": {
     "html-typings": "app/index.js"
