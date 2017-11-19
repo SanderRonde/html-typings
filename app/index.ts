@@ -4,6 +4,7 @@ import { Parser } from 'htmlparser2';
 import { Glob } from 'glob';
 import fs = require('fs');
 import { Gaze }  from 'gaze';
+import { exec } from 'child_process';
 
 namespace Input {
 	const parser = new ArgumentParser({
@@ -746,8 +747,26 @@ export function cli(args: string[]): {
 	}
 }
 
+interface HTMLTypingsWindow extends Window {
+	htmlTypings: {
+		extractStringTypes: typeof extractStringTypes;
+		extractGlobTypes: typeof extractGlobTypes;
+		extractFileTypes: typeof extractFileTypes;
+		extractFolderTypes: typeof extractFolderTypes;
+		cli: typeof cli;
+	}
+}
+
 if (require.main === module) {
 	//Called via command-line
 	Input.parse();
 	main();
+} else if (typeof window !== 'undefined') {
+	(<HTMLTypingsWindow>window).htmlTypings = {
+		cli: cli,
+		extractFileTypes: extractFileTypes,
+		extractFolderTypes: extractFolderTypes,
+		extractGlobTypes: extractGlobTypes,
+		extractStringTypes: extractStringTypes
+	}
 }
