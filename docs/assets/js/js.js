@@ -149,7 +149,6 @@ var DEFAULT_CONTENTS = {
                 window.exports = {};
                 var htmlFile = window.sourceEditor.models.html.getValue();
                 window.require(['./assets/html-typings/app/index.js'], function () {
-                    debugger;
                     var defs = window.htmlTypings.extractStringTypes(htmlFile);
                     window.defs.update(defs);
                     var clearDefs = window.defs.currentDefsDisposable;

@@ -288,7 +288,6 @@ const specialElementManual = document.getElementById('specialEl') as HTMLElement
 				window.exports = {};
 				const htmlFile = window.sourceEditor.models.html.getValue();
 				window.require(['./assets/html-typings/app/index.js'], () => {
-					debugger;
 					const defs = window.htmlTypings.extractStringTypes(htmlFile);
 					
 					window.defs.update(defs);
