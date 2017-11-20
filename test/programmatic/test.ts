@@ -120,7 +120,7 @@ function doTest(name: Tests) {
 		assert.equal(results.glob, expected, 'Results should match expected values');
 	});
 	it('should compile without errors', async function() {
-		this.timeout(10000);
+		this.timeout(20000);
 		this.slow(6000);
 		await tsCompile(results.glob);
 	});
