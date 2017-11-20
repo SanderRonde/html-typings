@@ -1,10 +1,10 @@
+/// <reference path="../typings/gaze.d.ts"/>
 import { ArgumentParser } from 'argparse';
 import path = require('path');
 import { Parser } from 'htmlparser2';
 import { Glob } from 'glob';
 import fs = require('fs');
 import { Gaze }  from 'gaze';
-import { exec } from 'child_process';
 
 namespace Input {
 	const parser = new ArgumentParser({
@@ -390,38 +390,54 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 				module?: string;
 			}
 
-			export function getTypings(file: string): PartialTypingsObj {
-				const map: {
-					ids: {
-						[key: string]: string;
+			export interface ModuleMappingPartialTypingsObj {
+				[moduleName: string]: PartialTypingsObj;
+			}
+
+			export function getTypings(file: string): ModuleMappingPartialTypingsObj {
+				const maps: {
+					[moduleName: string]: {
+						ids: {
+							[key: string]: string;
+						}
+						classes: [string, string][]
 					}
-					classes: [string, string][]
-					module?: string;
 				} = {
-					ids: {},
-					classes: []
-				};
+					__default__: {
+						ids: {},
+						classes: []
+					}
+				}
 			
-				let domModuleKey: string = null;
+				let mapKey: string = '__default__';
 				const parser = new Parser({
 					 onopentag(name, attribs) {
 						if (name === 'dom-module') {
-							domModuleKey = attribs.id;
+							mapKey = attribs.id;
+							maps[mapKey] = {
+								ids: {},
+								classes: []
+							}
 							return;
 						} else if (name === 'template') {
 							if (attribs.id) {
-								map.ids[`#${attribs.id}`] = attribs['data-element-type'] ||
+								maps[mapKey].ids[`#${attribs.id}`] = attribs['data-element-type'] ||
 									Constants.getTagType(attribs.is);
 							}
 						} else {
 							if (attribs.id) {
-								map.ids[`#${attribs.id}`] = attribs['data-element-type'] ||
+								maps[mapKey].ids[`#${attribs.id}`] = attribs['data-element-type'] ||
 									Constants.getTagType(name);
 							}
 						}
 						if (attribs.class) {
-							map.classes.push([attribs.class, attribs['data-element-type'] || 
+							maps[mapKey].classes.push([attribs.class, attribs['data-element-type'] || 
 								Constants.getTagType(name)]);
+						}
+					 },
+					 onclosetag(name) {
+						if (name === 'dom-module') {
+							mapKey = '__default__';
 						}
 					 }
 				});
@@ -429,11 +445,7 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 				parser.write(file);
 				parser.end();
 			
-				if (domModuleKey) {
-					map.module = domModuleKey;
-				}
-			
-				return map;
+				return maps;
 			}
 			
 			export async function writeToOutput(typings: TypingsObj) {
@@ -458,13 +470,13 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 			}
 
 			export async function getSplitTypings(input: string|string[], files?: string[], splitTypings: {
-				[key: string]: PartialTypingsObj;
+				[key: string]: ModuleMappingPartialTypingsObj;
 			} = {}) {
 				files = files || await Files.getInputFiles(input)
 				files = files.sort();
 				const toSkip = Object.getOwnPropertyNames(splitTypings);
 				const contentsMap = await Files.readInputFiles(files, toSkip);
-				return Util.objectForEach<string, PartialTypingsObj>(contentsMap, (fileContent) => {
+				return Util.objectForEach<string, ModuleMappingPartialTypingsObj>(contentsMap, (fileContent) => {
 					return getTypings(fileContent);
 				}, splitTypings);
 			}
@@ -477,12 +489,14 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 
 		export namespace Joining {
 			export function mergeTypes(types: {
-				[key: string]: {
-					ids: {
-						[key: string]: string;
+				[fileName: string]: {
+					[moduleName: string]: {
+						ids: {
+							[key: string]: string;
+						}
+						classes: [string, string][]
+						module?: string;
 					}
-					classes: [string, string][]
-					module?: string;
 				}
 			}) {
 				let selectorMap: {
@@ -490,7 +504,7 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 				} = {};
 			
 				const moduleMap: {
-					[key: string]: {
+					[moduleName: string]: {
 						[key: string]: string;
 					}
 				} = {};
@@ -504,24 +518,26 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 				} = {};
 			
 			
-				for (let key in types) {
-					const typeMap = types[key];
-					if (typeMap.module) {
-						moduleMap[typeMap.module] = Util.removeKeysFirstChar(typeMap.ids);
-					}
-					idMap = { ...idMap, ...Util.removeKeysFirstChar(typeMap.ids) }
-					selectorMap = { ...selectorMap, ...typeMap.ids }
-			
-					typeMap.classes.forEach((typeMapClass) => {
-						const [className, tagName] = typeMapClass;
-						if (className in allClassTypes) {
-							if (allClassTypes[className].indexOf(tagName) === -1) {
-								allClassTypes[className].push(tagName);
-							}
-						} else {
-							allClassTypes[className] = [tagName];
+				for (let fileName in types) {
+					for (let moduleName in types[fileName]) {
+						const typeMap = types[fileName][moduleName];
+						if (moduleName !== '__default__') {
+							moduleMap[moduleName] = Util.removeKeysFirstChar(typeMap.ids);
 						}
-					});
+						idMap = { ...idMap, ...Util.removeKeysFirstChar(typeMap.ids) }
+						selectorMap = { ...selectorMap, ...typeMap.ids }
+				
+						typeMap.classes.forEach((typeMapClass) => {
+							const [className, tagName] = typeMapClass;
+							if (className in allClassTypes) {
+								if (allClassTypes[className].indexOf(tagName) === -1) {
+									allClassTypes[className].push(tagName);
+								}
+							} else {
+								allClassTypes[className] = [tagName];
+							}
+						});
+					}
 				}
 			
 				const joinedClassNames: {
@@ -572,7 +588,7 @@ function watchFiles(input: string, callback: (changedFile: string, files: string
 }
 
 async function doWatchCompilation(files: string[], previousTypings: {
-	[key: string]: Main.Conversion.Extraction.PartialTypingsObj;
+	[key: string]: Main.Conversion.Extraction.ModuleMappingPartialTypingsObj;
 }, done: () => void) {
 	const splitTypings = await Main.Conversion.Extraction.getSplitTypings(Input.args.input, files, previousTypings);
 	const joinedTypes = Main.Conversion.Joining.mergeTypes(splitTypings);
@@ -607,7 +623,7 @@ function main() {
 		}
 		if (Input.args.watch) {
 			let splitTypings: {
-				[key: string]: Main.Conversion.Extraction.PartialTypingsObj;
+				[key: string]: Main.Conversion.Extraction.ModuleMappingPartialTypingsObj;
 			} = null;
 			let input = Input.args.input;
 			if (Util.endsWith(Input.args.input, '/') || 
