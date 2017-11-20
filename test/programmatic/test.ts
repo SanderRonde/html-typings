@@ -73,7 +73,11 @@ async function tsCompile(input: string) {
 	const diagnostics = ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics);
 
 	if (diagnostics.length > 0 || emitResult.emitSkipped) {
-		throw new Error(JSON.stringify(diagnostics));
+		if (diagnostics.map((diagnostic) => {
+			return diagnostic.messageText.toString().indexOf('Cannot find name') === -1;
+		}).filter(val => val).length > 0) {
+			throw new Error(diagnostics.toString());
+		}
 	}
 }
 
