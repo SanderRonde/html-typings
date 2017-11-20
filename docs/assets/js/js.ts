@@ -315,7 +315,7 @@ const specialElementManual = document.getElementById('specialEl') as HTMLElement
 	(() => {
 		function loadDefs(path: string, name: string) {
 			const xhr = new XMLHttpRequest();
-			xhr.open('GET', `${location.origin}${path}`);
+			xhr.open('GET', `${location.origin}/html-typings${path}`);
 			xhr.onload = () => {
 				if (xhr.readyState === xhr.DONE) {
 					if (xhr.status === 200) {

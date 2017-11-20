@@ -172,7 +172,7 @@ var DEFAULT_CONTENTS = {
     (function () {
         function loadDefs(path, name) {
             var xhr = new XMLHttpRequest();
-            xhr.open('GET', "" + location.origin + path);
+            xhr.open('GET', location.origin + "/html-typings" + path);
             xhr.onload = function () {
                 if (xhr.readyState === xhr.DONE) {
                     if (xhr.status === 200) {
