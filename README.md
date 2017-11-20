@@ -37,7 +37,7 @@ type CustomElement<T extends keyof ModuleMap> = HTMLElement & {
 	$: ModuleMap[T]
 };
 
-const myElement: CustomElement<'my-element'> = document.getElementsByTagName('my-element');
+const myElement: CustomElement<'my-element'> = document.getElementsByTagName('my-element')[0];
 
 // Type will be HTMLHeaderElement
 const header = myElement.$.header;
