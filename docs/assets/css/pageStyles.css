@@ -1,0 +1,82 @@
+.page-header {
+	padding: 20px 0;
+	font-size: 200%;
+}
+
+.mainContent {
+	margin: 0 auto;
+	padding: 2rem 6rem;
+}
+
+.editors {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	max-width: 100%;
+}
+
+.editorElement {
+	width: 43vw;
+	height: 70vh;
+}
+
+.editorElement {
+	border: 1px solid grey;
+	border-top: 0;
+}
+
+.editorHeader {
+	display: flex;
+	justify-content: space-between;
+	border-bottom: 1px solid grey;
+	height: 30px;
+}
+
+.editorTab {
+	padding: 5px 10px;
+	font-size: 80%;
+	border: 1px solid grey;
+	margin-bottom: -1px;
+	color: #9d9d9d;
+	cursor: pointer;
+}
+
+.editorTab.active {
+	color: #252525;
+	border-bottom: 1px solid #fffffe;
+}
+
+.onUpdateWidget {
+	color: #5cab5f;
+	font-weight: bold;
+	transform: translateY(100px);
+	transition: transform 250ms ease-in;
+}
+
+.onUpdateWidget.active {
+	transform: translateY(0);
+}
+
+.site-footer {
+	display: flex;
+	justify-content: space-between;
+}
+
+.checkout-package {
+	font-weight: bold;
+}
+
+.editorTabs {
+	display: flex;
+}
+
+.editorName {
+	line-height: 30px;
+	font-weight: bold;
+	color: #151515;
+	margin-right: 8px;
+}
+
+.editorHeader.float-right {
+	justify-content: flex-end;
+}
