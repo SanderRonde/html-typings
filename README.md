@@ -74,7 +74,7 @@ interface MySpecialType extends HTMLElement {
 const specialElement = document.getElementById('specialEl');
 
 // Instead of this for every occurrence
-const specialElement = document.getElementById('specialEl') as HTMLElement & {
+const specialElementManual = document.getElementById('specialEl') as HTMLElement & {
 	func(): void;
 	color: string;
 }
