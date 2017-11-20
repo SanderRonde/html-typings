@@ -5,14 +5,33 @@ module.exports = function(grunt) {
 			monaco: {
 				files: [{
 					expand: true,
-					cwd: 'node_modules/monaco-editor/min',
+					cwd: 'node_modules/monaco-editor/',
 					src: [
-						'**/**',
-						'!basic-languages/src/**',
-						'basic-languages/src/html.js'
+						'min/**/**',
+						'!min/basic-languages/src/**',
+						'min/basic-languages/src/html.js',
+						'monaco.d.ts'
 					],
-					dest: 'docs/assets/monaco-editor/src/min/'
+					dest: 'docs/assets/monaco-editor/'
 				}]
+			},
+			htmlTypings: {
+				files: [{
+					src: [
+						'typings/html-typings.d.ts'
+					],
+					dest: 'docs/assets/html-typings/'
+				}]
+			}
+		},
+		browserify: {
+			htmlTypings: {
+				files: {
+					'docs/assets/html-typings/app/index.js': [
+						'app/index.js'
+					]
+				},
+				options: {}
 			}
 		},
 		htmlTypings: {
@@ -27,6 +46,7 @@ module.exports = function(grunt) {
 		}
 	});
 
+	grunt.loadNpmTasks('grunt-browserify');
 	grunt.loadNpmTasks('grunt-contrib-copy');
 	grunt.loadTasks('tasks');
 
@@ -34,6 +54,7 @@ module.exports = function(grunt) {
 	// Generates HTML Typings for the docs HTML files
 	grunt.registerTask('genDefs', ['htmlTypings:docs']);
 
-	// Copies monaco to the /docs folder so it can be bundled
-	grunt.registerTask('copyMonaco', ['copy:monaco']);
+	// Copies required files to the /docs folder so they can be bundled
+	grunt.registerTask('copyFiles', ['copy:monaco', 'copy:htmlTypings', 
+		'browserify:htmlTypings']);
 }
