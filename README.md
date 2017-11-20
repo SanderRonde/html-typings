@@ -29,7 +29,7 @@ const fancyElements = document.getElementsByClassName('fancy');
 const sameInput = document.querySelector('#someInput');
 
 // Type will also be NodeListOf<HTMLDivElement|HTMLSpanElement>
-const fancyElements = document.querySelectorAll('.fancy');
+const fancyElementsCopy = document.querySelectorAll('.fancy');
 
 // Some custom element libraries allow for element-specific ID selectors
 // for example polymer https://www.polymer-project.org/1.0/docs/devguide/local-dom#work-with-local-dom 
