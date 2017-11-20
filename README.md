@@ -33,7 +33,7 @@ const fancyElementsCopy = document.querySelectorAll('.fancy');
 
 // Some custom element libraries allow for element-specific ID selectors
 // for example polymer https://www.polymer-project.org/1.0/docs/devguide/local-dom#work-with-local-dom 
-type CustomElement<T extends string> = HTMLElement & {
+type CustomElement<T extends keyof ModuleMap> = HTMLElement & {
 	$: ModuleMap[T]
 };
 
