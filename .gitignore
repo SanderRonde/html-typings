@@ -58,3 +58,8 @@ jspm_packages/
 !gruntfile.js
 
 package-lock.json
+test/cli/output.d.ts
+test/programmatic/tempFile.d.ts
+
+test/**/testInput.html
+test/**/testInput1.html
