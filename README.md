@@ -2,7 +2,8 @@
 
 # HTML Typings
 
-Generates typings for HTML selectors based on your HTML files
+Generates typings for HTML selectors based on your HTML files.
+[Try it out](https://sanderronde.github.io/html-typings)
 
 ## Installing
 
