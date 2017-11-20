@@ -1,7 +1,5 @@
 _site
 .sass-cache
 .jekyll-metadata
-assets/js.js
 **/*.d.ts
-assets/monaco-editor
-assets/html-typings
+!assets/**
