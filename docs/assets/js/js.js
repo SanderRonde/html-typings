@@ -4,7 +4,7 @@ var DEFAULT_CONTENTS = {
         ts: "//Import HTML-typings\nimport * as htmlTypings from 'html-typings';\n\n//Get the HTML source code\nconst sourceCode = window.sourceEditor.models.html.getValue();\n\n//Generate defs file\nconst defsFile = htmlTypings.extractStringTypes(sourceCode);\n\n//Write away definitions\nrequire('fs').writeFile('src/defs.d.ts', defsFile, {\n\tencoding: 'utf-8'\n}, (err: Error) => {\n\tif (err) {\n\t\t//Fail\n\t} else {\n\t\t//Done\n\t}\n});",
         html: "<html>\n\t<head>\n\t\t<title>html-typings</title>\n\t</head>\n\t<body>\n\t\t<input id=\"someInput\">\n\t\t<div class=\"fancy\"></div>\n\t\t<span class=\"fancy\"></div>\n\t\t<div id=\"specialEl\" data-element-type=\"MySpecialType\"></div>\n\t\t<dom-module id=\"my-element\">\n\t\t\t<h1 id=\"header\">{{header}}</h1>\n\t\t\t<my-other-element id=\"otherElement\"></my-other-element>\n\t\t</dom-module>\n\t\t<dom-module id=\"my-other-element\">\n\t\t\t<h2 id=\"header\">{{header}}</h2>\n\t\t</dom-module>\n\t</body>\n</html>"
     },
-    try: {
+    "try": {
         ts: "// The generated HTML typings file is automatically included,\n//  normally you'd use ///<reference path=\"defs.d.ts\" /> for this\n\n// Type will be HTMLInputElement\nconst input = document.getElementById('someInput');\n\n// Type will be NodeListOf<HTMLDivElement|HTMLSpanElement>\nconst fancyElements = document.getElementsByClassName('fancy');\n\n// Type will also be HTMLInputElement\nconst sameInput = document.querySelector('#someInput');\n\n// Type will also be NodeListOf<HTMLDivElement|HTMLSpanElement>\nconst fancyElementsCopy = document.querySelectorAll('.fancy');\n\n// Some custom element libraries allow for element-specific ID selectors\n// for example polymer:\n// https://www.polymer-project.org/1.0/docs/devguide/local-dom#work-with-local-dom \ntype Modules = keyof ModuleMap;\ntype CustomElement<T extends Modules> = Element & {\n\t$: ModuleMap[T]\n};\n\ntype HTMLMyElementElement = CustomElement<'my-element'>;\ntype HTMLMyOtherElementElement = CustomElement<'my-other-element'>;\n\n// Will be a custom element\nconst myElement = document.getElementsByTagName('my-element')[0];\n\n// Type will be HTMLHeaderElement\nconst header = myElement.$.header;\n\n// Gets the nested element\nconst nestedHeader = myElement.$.otherElement.$.header;\n\n\ninterface MySpecialType extends HTMLElement {\n\tfunc(): void;\n\tcolor: string;\n}\n\n// Type will be MySpecialType\nconst specialElement = document.getElementById('specialEl');\n\n// Instead of this for every occurrence\nconst specialElementManual = document.getElementById('specialEl') as HTMLElement & {\n\tfunc(): void;\n\tcolor: string;\n}"
     }
 };
@@ -106,7 +106,7 @@ var DEFAULT_CONTENTS = {
         return returnVal;
     })();
     var tryEditor = (function () {
-        var tsModel = monaco.editor.createModel(DEFAULT_CONTENTS.try.ts, 'typescript');
+        var tsModel = monaco.editor.createModel(DEFAULT_CONTENTS["try"].ts, 'typescript');
         var editor = monaco.editor.create(document.getElementById('tryEditor'), {
             model: tsModel,
             minimap: {
@@ -196,3 +196,4 @@ var DEFAULT_CONTENTS = {
     };
     tryEditor.updateDefs(false);
 });
+//# sourceMappingURL=js.js.map
