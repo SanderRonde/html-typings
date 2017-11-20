@@ -194,7 +194,7 @@ namespace Files {
 
 namespace Main {
 	namespace Constants {
-		export const getFileTemplate = (selectorMap: string, idMap: string, classMap: string, moduleMap: string) => {
+		export const getFileTemplate = (selectorMap: string, idMap: string, classMap: string, moduleMap: string, tagMap: string) => {
 			return `interface SelectorMap ${selectorMap}
 
 interface IDMap ${idMap}
@@ -202,6 +202,8 @@ interface IDMap ${idMap}
 interface ClassMap ${classMap}
 
 interface ModuleMap ${moduleMap}
+
+interface TagMap ${tagMap}
 
 interface NodeSelector {
 	querySelector<T extends keyof SelectorMap>(selector: T): SelectorMap[T];
@@ -211,6 +213,7 @@ interface NodeSelector {
 interface Document {
 	getElementById<T extends keyof IDMap>(elementId: T): IDMap[T];
 	getElementsByClassName<T extends keyof ClassMap>(classNames: string): HTMLCollectionOf<ClassMap[T]>
+	getElementsByTagName<T extends keyof TagMap>(tagName: T): NodeListOf<TagMap[T]>;
 }
 
 type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
@@ -516,13 +519,18 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 				const allClassTypes: {
 					[key: string]: string[]
 				} = {};
-			
+
+				const tagNameMap: {
+					[key: string]: string;
+				} = {};
 			
 				for (let fileName in types) {
 					for (let moduleName in types[fileName]) {
 						const typeMap = types[fileName][moduleName];
 						if (moduleName !== '__default__') {
 							moduleMap[moduleName] = Util.removeKeysFirstChar(typeMap.ids);
+							tagNameMap[moduleName] = Constants.getTagType(moduleName);
+							selectorMap[moduleName] = tagNameMap[moduleName];
 						}
 						idMap = { ...idMap, ...Util.removeKeysFirstChar(typeMap.ids) }
 						selectorMap = { ...selectorMap, ...typeMap.ids }
@@ -553,14 +561,16 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 					selectors: Util.sortObj(selectorMap),
 					modules: Util.sortObj(moduleMap),
 					ids: Util.sortObj(idMap),
-					classes: Util.sortObj(joinedClassNames)
+					classes: Util.sortObj(joinedClassNames),
+					tags: Util.sortObj(tagNameMap)
 				}
 			}
 
 			export function convertToDefsFile(typings: TypingsObj) {
-				const { classes, ids, modules, selectors } = typings;
+				const { classes, ids, modules, selectors, tags } = typings;
 				return Constants.getFileTemplate(Prettifying.formatTypings(selectors), 
-				Prettifying.formatTypings(ids), Prettifying.formatTypings(classes), Prettifying.formatTypings(modules));
+				Prettifying.formatTypings(ids), Prettifying.formatTypings(classes), 
+				Prettifying.formatTypings(modules), Prettifying.formatTypings(tags));
 			}			
 		}
 	}
@@ -669,6 +679,9 @@ interface TypingsObj {
 	classes: {
 		[key: string]: string;
 	};
+	tags: {
+		[key: string]: string;
+	}
 }
 
 export function extractStringTypes(fileContents: string): string;
