@@ -25,7 +25,7 @@ var DEFAULT_CONTENTS = {
     waitFor('require', function () {
         window.require.config({
             paths: {
-                'vs': '/assets/monaco-editor/min/vs'
+                'vs': '/html-typings/assets/monaco-editor/min/vs'
             }
         });
         window.require(['vs/editor/editor.main'], function () {

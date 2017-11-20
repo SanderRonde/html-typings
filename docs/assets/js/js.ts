@@ -148,7 +148,7 @@ const specialElementManual = document.getElementById('specialEl') as HTMLElement
 	waitFor('require', () => {
 		window.require.config({
 			paths: {
-				'vs': '/assets/monaco-editor/min/vs'
+				'vs': '/html-typings/assets/monaco-editor/min/vs'
 			}
 		});
 		//Load the editor
