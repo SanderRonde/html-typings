@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/SanderRonde/html-typings.svg?branch=master)](https://travis-ci.org/SanderRonde/html-typings)
+[![npm version](https://badge.fury.io/js/html-typings.svg)](https://badge.fury.io/js/html-typings)
 
 # HTML Typings
 
