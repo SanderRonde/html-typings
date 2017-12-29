@@ -90,9 +90,9 @@ namespace Util {
 		return str.lastIndexOf(end) === str.length - end.length;
 	}
 
-	export function objectForEach<U, P>(obj: {
+	export function objectForEach<U, P, O extends {
 		[key: string]: U;
-	}, map: (input: U) => P, base: {
+	}>(obj: O, map: (value: U, key: keyof O) => P, base: {
 		[key: string]: P;
 	} = {}): {
 		[key: string]: P
@@ -105,7 +105,7 @@ namespace Util {
 			if (key in base) {
 				newObj[key] = base[key];
 			} else {
-				newObj[key] = map(obj[key]);
+				newObj[key] = map(obj[key], key);
 			}
 		}
 	
