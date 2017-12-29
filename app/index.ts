@@ -439,7 +439,7 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 
 			export function fillInclude(includePath: string, filePath: string) {
 				if (includePath in included) {
-					return included[includePath];
+					return JSON.parse(JSON.stringify(included[includePath]));
 				}
 
 				if (filePath === null) {
@@ -452,7 +452,7 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 					encoding: 'utf8'
 				});
 				const parsed = fillIncludes(parse(lex(includeFile)), filePath);
-				included[includePath] = parsed;
+				included[includePath] = JSON.parse(JSON.stringify(parsed));
 				return parsed;
 			}
 
