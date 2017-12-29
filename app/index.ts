@@ -90,6 +90,12 @@ namespace Util {
 		return str.lastIndexOf(end) === str.length - end.length;
 	}
 
+	export function isHtmlFile(file: string): boolean {
+		return Util.endsWith(file, '.html') || 
+			Util.endsWith(file, '.jade') || 
+			Util.endsWith(file, '.pug');
+	}
+
 	export function objectForEach<U, P, O extends {
 		[key: string]: U;
 	}>(obj: O, map: (value: U, key: keyof O) => P, base: {
@@ -159,7 +165,7 @@ namespace Files {
 					Logging.exit(2);
 				} else {
 					const nonDirMatches = matches.filter(match => !Util.endsWith(match, '/'));
-					const htmlFileMatches = nonDirMatches.filter(match => Util.endsWith(match, '.html'));
+					const htmlFileMatches = nonDirMatches.filter(match => Util.isHtmlFile(match));
 					resolve(htmlFileMatches);
 				}
 			});
@@ -619,7 +625,7 @@ function getWatched(watcher: Gaze): string[] {
 		files = [...files, ...watched[keys[i]]]
 	}
 	return files.filter((file) => {
-		return file && Util.endsWith(file, '.html');
+		return file && Util.isHtmlFile(file);
 	});
 }
 
