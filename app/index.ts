@@ -1,10 +1,12 @@
 /// <reference path="../typings/gaze.d.ts"/>
 import { ArgumentParser } from 'argparse';
-import path = require('path');
 import { Parser } from 'htmlparser2';
+import parse = require('pug-parser');
+import lex = require('pug-lexer');
+import path = require('path');
+import { Gaze }  from 'gaze';
 import { Glob } from 'glob';
 import fs = require('fs');
-import { Gaze }  from 'gaze';
 
 namespace Input {
 	const parser = new ArgumentParser({
@@ -57,7 +59,7 @@ namespace Logging {
 		if (reroute) {
 			listeners.exit(code);
 		} else {
-			listeners.exit(code);
+			process.exit(code);
 		}
 	}
 
@@ -65,7 +67,7 @@ namespace Logging {
 		if (reroute) {
 			listeners.error(...args);
 		} else {
-			listeners.error(...args);
+			console.error(...args);
 		}
 	}
 
@@ -96,7 +98,25 @@ namespace Util {
 			Util.endsWith(file, '.pug');
 	}
 
+	export enum FileTypes {
+		HTML,
+		PUG,
+		UNKNOWN
+	}
+
+	export function getFileType(name: string) {
+		if (endsWith(name, '.html')) {
+			return FileTypes.HTML;
+		}
+		if (endsWith(name, '.pug') || endsWith(name, '.jade')) {
+			return FileTypes.PUG;
+		}
+		return FileTypes.UNKNOWN;
+	}
+
 	export function objectForEach<U, P, O extends {
+		[key: string]: U;
+	} = {
 		[key: string]: U;
 	}>(obj: O, map: (value: U, key: keyof O) => P, base: {
 		[key: string]: P;
@@ -403,8 +423,176 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 				[moduleName: string]: PartialTypingsObj;
 			}
 
-			export function getTypings(file: string): ModuleMappingPartialTypingsObj {
-				const maps: {
+			export function parseHTML(content: string) {
+				const handler = new ParserHandler();
+				const parser = new Parser(handler.genObj());
+		   
+			   parser.write(content);
+			   parser.end();
+
+			   return handler.done();;
+			}
+			
+			const included: {
+				[file: string]: PugParser.ParserBlock
+			} = {};
+
+			export function fillInclude(includePath: string, filePath: string) {
+				if (includePath in included) {
+					return included[includePath];
+				}
+
+				if (filePath === null) {
+					throw new Error('Pug base path not given, please pass it using the options.pugPath setting');
+				}
+				const includeFinalPath = path.isAbsolute(includePath) ?
+					includePath : path.join(path.dirname(filePath), 
+						includePath);
+				const includeFile = fs.readFileSync(includeFinalPath, {
+					encoding: 'utf8'
+				});
+				const parsed = fillIncludes(parse(lex(includeFile)), filePath);
+				included[includePath] = parsed;
+				return parsed;
+			}
+
+			export function traverseConditionalWithoutReplacement(token: PugParser.ParserConditional, 
+				callback: (node: PugParser.ParserNode) => PugParser.ParserNode) {
+					traverseBlocks(token.consequent, callback);
+					if (token.alternate) {
+						if (token.alternate.type === 'Block') {
+							traverseBlocks(token.alternate, callback);
+						} else {
+							traverseConditionalWithoutReplacement(token.alternate, callback);
+						}
+					}
+				}
+
+			export function traverseBlocks(tokens: PugParser.ParserBlock, callback: (node: PugParser.ParserNode) => PugParser.ParserNode) {
+				for (const index in tokens.nodes) {
+					const token = tokens.nodes[index];
+					if (token.type === 'Conditional') {
+						traverseConditionalWithoutReplacement(token, callback);
+					} else if (token.type !== 'Block') {
+						tokens.nodes[index] = callback(token);
+						if (token.block) {
+							traverseBlocks(token.block, callback);
+						}
+					} else {
+						traverseBlocks(token, callback);
+					}
+				}
+			}
+
+			export function fillIncludes(tokens: PugParser.ParserBlock, filePath: string) {
+				traverseBlocks(tokens, (node) => {
+					if (node.type === 'Include') {
+						return fillInclude(node.file.path, filePath);
+					}
+					return node;
+				});
+				return tokens;
+			}
+
+			export function fillMixins(tokens: PugParser.ParserBlock) {
+				const definedMixins: {
+					[key: string]: PugParser.ParserBlock;
+				} = {};
+				
+				//First find them
+				traverseBlocks(tokens, (node) => {
+					if (node.type === 'Mixin' && node.call === false) {
+						definedMixins[node.name] = node.block;
+						return {
+							type: 'Block',
+							line: node.line,
+							filename: null,
+							nodes: []
+						}
+					}
+					return node;
+				});
+
+				//Then replace them
+				traverseBlocks(tokens, (node) => {
+					if (node.type === 'Mixin' && node.call === true && node.name in definedMixins) {
+						return definedMixins[node.name];
+					}
+					return node;
+				});
+
+				return tokens;
+			}
+
+			export function lexPug(content: string, filePath: string) {
+				return fillMixins(fillIncludes(parse(lex(content)), filePath));
+			}
+
+			export function objectifyAttributes(attribs: {
+				name: string;
+				val: any;
+				mustEscape: boolean;
+			}[]): {
+				[key: string]: string;
+			} {
+				const obj: {
+					[key: string]: string;
+				} = {};
+				for (let {name, val, mustEscape} of attribs) {
+					if (!mustEscape) {
+						obj[name] = stripQuotes(val);
+					}
+				}
+				return obj;
+			}
+
+			export function traverseConditional(node: PugParser.ParserConditional, fns: {
+				onopentag(name: string, attribs: {
+					[key: string]: string;
+				}): void;
+				onclosetag(name: string): void;
+			}) {
+				traversePug(node.consequent, fns);
+				if (node.alternate) {
+					if (node.alternate.type === 'Block') {
+						traversePug(node.alternate, fns);
+					} else {
+						traverseConditional(node.alternate, fns);
+					}
+				}
+			}
+
+			export function traversePug(content: PugParser.ParserBlock, fns: {
+				onopentag(name: string, attribs: {
+					[key: string]: string;
+				}): void;
+				onclosetag(name: string): void;
+			}) {
+				if (!content || !content.nodes) {
+					return;
+				}
+				for (const node of content.nodes) {
+					if (node.type === 'Block') {
+						traversePug(node, fns);
+					} else if (node.type === 'Tag') {
+						fns.onopentag(node.name, objectifyAttributes(node.attrs));
+						traversePug(node.block, fns);
+						fns.onclosetag(node.name);
+					} else if (node.type === 'Conditional') {
+						traverseConditional(node, fns);
+					} else if (node.block && node.block.nodes.length) {
+						traversePug(node.block, fns);
+					}
+				}
+			}
+
+			export function stripQuotes(word: any) {
+				return typeof word === 'string' ? 
+					word.slice(1, -1) : word;
+			}
+
+			export class ParserHandler {
+				public maps: {
 					[moduleName: string]: {
 						ids: {
 							[key: string]: string;
@@ -417,44 +605,69 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 						classes: []
 					}
 				}
-			
-				let mapKey: string = '__default__';
-				const parser = new Parser({
-					 onopentag(name, attribs) {
-						if (name === 'dom-module') {
-							mapKey = attribs.id;
-							maps[mapKey] = {
-								ids: {},
-								classes: []
-							}
-							return;
-						} else if (name === 'template') {
-							if (attribs.id) {
-								maps[mapKey].ids[`#${attribs.id}`] = attribs['data-element-type'] ||
-									Constants.getTagType(attribs.is);
-							}
-						} else {
-							if (attribs.id) {
-								maps[mapKey].ids[`#${attribs.id}`] = attribs['data-element-type'] ||
-									Constants.getTagType(name);
-							}
+				public mapKey: string = '__default__';
+
+				constructor() { }
+
+				public onOpen(name: string, attribs: {
+					[key: string]: string;
+				}) {
+					if (name === 'dom-module') {
+						this.mapKey = attribs.id;
+						this.maps[this.mapKey] = {
+							ids: {},
+							classes: []
 						}
-						if (attribs.class) {
-							maps[mapKey].classes.push([attribs.class, attribs['data-element-type'] || 
-								Constants.getTagType(name)]);
+						return;
+					} else if (name === 'template') {
+						if (attribs.id) {
+							this.maps[this.mapKey].ids[`#${attribs.id}`] = attribs['data-element-type'] ||
+								Constants.getTagType(attribs.is);
 						}
-					 },
-					 onclosetag(name) {
-						if (name === 'dom-module') {
-							mapKey = '__default__';
+					} else {
+						if (attribs.id) {
+							this.maps[this.mapKey].ids[`#${attribs.id}`] = attribs['data-element-type'] ||
+								Constants.getTagType(name);
 						}
-					 }
-				});
-			
-				parser.write(file);
-				parser.end();
-			
-				return maps;
+					}
+					if (attribs.class) {
+						this.maps[this.mapKey].classes.push([attribs.class, attribs['data-element-type'] || 
+							Constants.getTagType(name)]);
+					}
+				}
+
+				public onClose(name: string) {
+					if (name === 'dom-module') {
+						this.mapKey = '__default__';
+					}
+				}
+
+				genObj() {
+					return {
+						onopentag: this.onOpen.bind(this),
+						onclosetag: this.onClose.bind(this)
+					}
+				}
+
+				done() {
+					return this.maps;
+				}
+			}
+
+			export function parsePug(content: string, filePath: string): ModuleMappingPartialTypingsObj {
+				const handler = new ParserHandler();
+				traversePug(lexPug(content, filePath), handler.genObj());
+				return handler.done();
+			}
+
+			export function getTypings(file: string, filePath: string, fileType: Util.FileTypes): ModuleMappingPartialTypingsObj {
+				switch (fileType) {
+					case Util.FileTypes.PUG:
+						return parsePug(file, filePath);
+					case Util.FileTypes.HTML:
+					default:
+						return parseHTML(file);
+				}
 			}
 			
 			export async function writeToOutput(typings: TypingsObj) {
@@ -485,8 +698,8 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 				files = files.sort();
 				const toSkip = Object.getOwnPropertyNames(splitTypings);
 				const contentsMap = await Files.readInputFiles(files, toSkip);
-				return Util.objectForEach<string, ModuleMappingPartialTypingsObj>(contentsMap, (fileContent) => {
-					return getTypings(fileContent);
+				return Util.objectForEach<string, ModuleMappingPartialTypingsObj>(contentsMap, (fileContent, fileName) => {
+					return getTypings(fileContent, fileName, Util.getFileType(fileName));
 				}, splitTypings);
 			}
 			
@@ -605,14 +818,13 @@ function watchFiles(input: string, callback: (changedFile: string, files: string
 
 async function doWatchCompilation(files: string[], previousTypings: {
 	[key: string]: Main.Conversion.Extraction.ModuleMappingPartialTypingsObj;
-}, done: () => void) {
+}) {
 	const splitTypings = await Main.Conversion.Extraction.getSplitTypings(Input.args.input, files, previousTypings);
 	const joinedTypes = Main.Conversion.Joining.mergeTypes(splitTypings);
 	Main.Conversion.Extraction.writeToOutput(joinedTypes).then(() => {
 		Logging.log('Generated typings');
 	}).catch((err) => {
 		Logging.exit(1);
-		done();
 	});
 	return splitTypings;
 }
@@ -631,7 +843,7 @@ function getWatched(watcher: Gaze): string[] {
 
 function main() {
 	let close: () => void = null;
-	new Promise(async (resolve) => {
+	(async () => {
 		let watcher: Gaze = null;
 		close = () => {
 			watcher && watcher.close();
@@ -651,19 +863,17 @@ function main() {
 			watcher = watchFiles(input, async (changedFile, files) => {
 				Logging.log('File(s) changed, re-generating typings for new file(s)');
 				delete splitTypings[changedFile];
-				splitTypings = await doWatchCompilation(files, splitTypings, resolve);
+				splitTypings = await doWatchCompilation(files, splitTypings);
 			});	
-			splitTypings = await doWatchCompilation(getWatched(watcher), {}, resolve)
+			splitTypings = await doWatchCompilation(getWatched(watcher), {})
 		} else {
 			Main.Conversion.Extraction.extractTypes().then(() => {
 				Logging.exit(0);
-				resolve();
 			}).catch(() => {
 				Logging.exit(1);
-				resolve();
 			});
 		}
-	});
+	})();
 
 	return () => {
 		close();
@@ -691,10 +901,30 @@ interface TypingsObj {
 }
 
 export function extractStringTypes(fileContents: string): string;
-export function extractStringTypes(fileContents: string, getTypesObj: boolean): TypingsObj;
-export function extractStringTypes(fileContents: string, getTypesObj = false): string|TypingsObj {
+export function extractStringTypes(fileContents: string, options: {
+	isPug?: boolean;
+	getTypesObj?: null|false;
+	pugPath?: string;
+}): string;
+export function extractStringTypes(fileContents: string, options: {
+	isPug?: boolean;
+	getTypesObj?: true;
+	pugPath?: string;
+}): TypingsObj;
+export function extractStringTypes(fileContents: string, options: {
+	isPug?: boolean;
+	getTypesObj?: boolean|null;
+	pugPath?: string;
+} = {
+	isPug: false,
+	getTypesObj: false,
+	pugPath: null
+}): string|TypingsObj {
+	const { isPug, getTypesObj, pugPath } = options;
+
 	const typings = Main.Conversion.Joining.mergeTypes({
-		'string': Main.Conversion.Extraction.getTypings(fileContents)
+		'string': Main.Conversion.Extraction.getTypings(fileContents, 
+			pugPath, isPug ? Util.FileTypes.PUG : Util.FileTypes.HTML)
 	});
 	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings);
 }

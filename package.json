@@ -35,7 +35,8 @@
     "gaze": "^1.1.2",
     "glob": "^7.1.2",
     "htmlparser2": "^3.9.2",
-    "typescript": "^2.5.3"
+    "pug-lexer": "^3.1.0",
+    "pug-parser": "^4.0.0"
   },
   "devDependencies": {
     "@types/argparse": "^1.0.33",
@@ -44,14 +45,15 @@
     "@types/glob": "^5.0.32",
     "@types/htmlparser2": "^3.7.31",
     "@types/mocha": "^2.2.43",
-    "@types/node": "^8.0.31",
+    "@types/node": "^8.5.2",
     "chai": "^4.1.2",
     "grunt": "^1.0.1",
     "grunt-browserify": "^5.2.0",
     "grunt-contrib-copy": "^1.0.0",
     "mocha": "^3.5.3",
     "mocha-steps": "^1.1.0",
-    "monaco-editor": "^0.10.1"
+    "monaco-editor": "^0.10.1",
+    "typescript": "^2.6.2"
   },
   "typings": "typings/html-typings.d.ts"
 }
