@@ -13,8 +13,8 @@ import {
 
 type Tests = 'dom-module'|'empty-file'|'multi'|'none'|'standard'|'nested';
 
-function getFilesInDir(dirName: Tests): string[] {
-	return glob.sync(`./test/programmatic/${dirName}/**/*.html`, {
+function getFilesInDir(dirName: Tests, isPug: boolean = false): string[] {
+	return glob.sync(`./test/programmatic/${isPug ? 'pug' : 'html'}/${dirName}/**/*.html`, {
 		absolute: true
 	}).sort();
 }
@@ -32,12 +32,22 @@ function readFile(filePath: string): Promise<string> {
 }
 
 const testMaps = {
-	'dom-module': getFilesInDir('dom-module'),
-	'empty-file': getFilesInDir('empty-file'),
-	'multi': getFilesInDir('multi'),
-	'none': getFilesInDir('none'),
-	'standard': getFilesInDir('standard'),
-	'nested': getFilesInDir('nested')
+	html: {
+		'dom-module': getFilesInDir('dom-module'),
+		'empty-file': getFilesInDir('empty-file'),
+		'multi': getFilesInDir('multi'),
+		'none': getFilesInDir('none'),
+		'standard': getFilesInDir('standard'),
+		'nested': getFilesInDir('nested')
+	},
+	pug: {
+		'dom-module': getFilesInDir('dom-module', true),
+		'empty-file': getFilesInDir('empty-file', true),
+		'multi': getFilesInDir('multi', true),
+		'none': getFilesInDir('none', true),
+		'standard': getFilesInDir('standard', true),
+		'nested': getFilesInDir('nested', true)
+	}
 }
 
 async function tsCompile(input: string) {
@@ -81,7 +91,7 @@ async function tsCompile(input: string) {
 	}
 }
 
-function doTest(name: Tests) {
+function doTest(name: Tests, isPug: boolean) {
 	const results: {
 		string?: string;
 		glob?: string;
@@ -90,25 +100,28 @@ function doTest(name: Tests) {
 	} = {};
 	step('should be able to run the main process without errors', async function () {
 		this.slow(100);
-		results.glob = await extractGlobTypes(`./test/programmatic/${name}/**/*.html`);
+		results.glob = await extractGlobTypes(`./test/programmatic/${isPug ? 'pug' : 'html'}/${name}/**/*.html`);
 	});
-	if (testMaps[name].length === 1) {
+	if (testMaps[isPug ? 'pug' : 'html'][name].length === 1) {
 		//Skip single-file tests if there are multiple files or none
 		step('should be able to run the main process using string-only input', async () => {
-			results.string = await extractStringTypes(await readFile(testMaps[name][0]));
+			results.string = await extractStringTypes(await readFile(testMaps[isPug ? 'pug' : 'html'][name][0]), {
+				isPug: true,
+				pugPath: testMaps[isPug ? 'pug' : 'html'][name][0]
+			});
 		});
 	}
 	step('should be able to run the main process using folder input', async () => {
 		results.folder = await extractFolderTypes(path.join(__dirname, `./${name}/`));
 	});
 	step('should be able to run the main process using file-only input', async () => {
-		results.file = await extractFileTypes(testMaps[name]);
+		results.file = await extractFileTypes(testMaps[isPug ? 'pug' : 'html'][name]);
 	});
 
 	it('should have produced the same results for all input methods', () => {
 		let { string, glob, file, folder } = results;
 		//Set string to any other in case it's not set
-		if (testMaps[name].length !== 1) {
+		if (testMaps[isPug ? 'pug' : 'html'][name].length !== 1) {
 			string = glob;
 		}
 		assert.equal(string, glob, 'String and glob are equal');
@@ -126,19 +139,29 @@ function doTest(name: Tests) {
 	});
 }
 
-function setupTest(name: Tests) {
+function setupTest(name: Tests, isPug: boolean = false) {
 	describe(name, () => {
-		doTest(name);
+		doTest(name, isPug);
 	});
 }
 
 export function programmaticTests() {
 	describe('Programmatic', () => {
-		setupTest('standard');	
-		setupTest('none');
-		setupTest('empty-file');
-		setupTest('dom-module');
-		setupTest('multi');
-		setupTest('nested');
+		describe('HTML', () => {
+			setupTest('standard');	
+			setupTest('none');
+			setupTest('empty-file');
+			setupTest('dom-module');
+			setupTest('multi');
+			setupTest('nested');
+		});
+		describe('Pug', () => {
+			setupTest('standard', true);	
+			setupTest('none', true);
+			setupTest('empty-file', true);
+			setupTest('dom-module', true);
+			setupTest('multi', true);
+			setupTest('nested', true);
+		});
 	});
 }
