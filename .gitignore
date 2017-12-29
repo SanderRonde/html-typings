@@ -63,3 +63,5 @@ test/programmatic/tempFile.d.ts
 
 test/**/testInput.html
 test/**/testInput1.html
+
+.vscode/
