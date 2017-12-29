@@ -14,7 +14,8 @@ import {
 type Tests = 'dom-module'|'empty-file'|'multi'|'none'|'standard'|'nested';
 
 function getFilesInDir(dirName: Tests, isPug: boolean = false): string[] {
-	return glob.sync(`./test/programmatic/${isPug ? 'pug' : 'html'}/${dirName}/**/*.html`, {
+	const type = isPug ? 'pug' : 'html';
+	return glob.sync(`./test/programmatic/${type}/${dirName}/**/*.${type}`, {
 		absolute: true
 	}).sort();
 }
@@ -98,30 +99,31 @@ function doTest(name: Tests, isPug: boolean) {
 		file?: string;
 		folder?: string;
 	} = {};
+	const type = isPug ? 'pug' : 'html';;
 	step('should be able to run the main process without errors', async function () {
 		this.slow(100);
-		results.glob = await extractGlobTypes(`./test/programmatic/${isPug ? 'pug' : 'html'}/${name}/**/*.html`);
+		results.glob = await extractGlobTypes(`./test/programmatic/${type}/${name}/**/*.${type}`);
 	});
-	if (testMaps[isPug ? 'pug' : 'html'][name].length === 1) {
+	if (testMaps[type][name].length === 1) {
 		//Skip single-file tests if there are multiple files or none
 		step('should be able to run the main process using string-only input', async () => {
-			results.string = await extractStringTypes(await readFile(testMaps[isPug ? 'pug' : 'html'][name][0]), {
-				isPug: true,
-				pugPath: testMaps[isPug ? 'pug' : 'html'][name][0]
+			results.string = await extractStringTypes(await readFile(testMaps[type][name][0]), {
+				isPug: isPug,
+				pugPath: testMaps[type][name][0]
 			});
 		});
 	}
 	step('should be able to run the main process using folder input', async () => {
-		results.folder = await extractFolderTypes(path.join(__dirname, `./${name}/`));
+		results.folder = await extractFolderTypes(path.join(__dirname, `./${type}/${name}/`));
 	});
 	step('should be able to run the main process using file-only input', async () => {
-		results.file = await extractFileTypes(testMaps[isPug ? 'pug' : 'html'][name]);
+		results.file = await extractFileTypes(testMaps[type][name]);
 	});
 
 	it('should have produced the same results for all input methods', () => {
 		let { string, glob, file, folder } = results;
 		//Set string to any other in case it's not set
-		if (testMaps[isPug ? 'pug' : 'html'][name].length !== 1) {
+		if (testMaps[type][name].length !== 1) {
 			string = glob;
 		}
 		assert.equal(string, glob, 'String and glob are equal');
@@ -129,7 +131,7 @@ function doTest(name: Tests, isPug: boolean) {
 		assert.equal(string, file, 'String and file are equal');
 	});
 	it('results should be correct', async () => {
-		const expected = await readFile(path.join(__dirname, `./${name}/expected.d.ts`));
+		const expected = await readFile(path.join(__dirname, `./${type}/${name}/expected.d.ts`));
 		assert.equal(results.glob, expected, 'Results should match expected values');
 	});
 	it('should compile without errors', async function() {
