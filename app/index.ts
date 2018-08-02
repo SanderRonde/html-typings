@@ -430,7 +430,7 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 			   parser.write(content);
 			   parser.end();
 
-			   return handler.done();;
+			   return handler.done();
 			}
 			
 			const included: {
