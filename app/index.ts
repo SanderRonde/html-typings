@@ -186,8 +186,7 @@ namespace Files {
 					Logging.exit(2);
 				} else {
 					const nonDirMatches = matches.filter(match => !Util.endsWith(match, '/'));
-					const htmlFileMatches = nonDirMatches.filter(match => Util.isHtmlFile(match));
-					resolve(htmlFileMatches);
+					resolve(nonDirMatches);
 				}
 			});
 		});
