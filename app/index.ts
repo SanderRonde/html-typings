@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /// <reference path="../typings/gaze.d.ts"/>
 import { ArgumentParser } from 'argparse';
 import { Parser } from 'htmlparser2';
