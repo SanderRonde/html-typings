@@ -698,7 +698,7 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 				files = files.sort();
 				const toSkip = Object.getOwnPropertyNames(splitTypings);
 				const contentsMap = await Files.readInputFiles(files, toSkip);
-				return Util.objectForEach<string, ModuleMappingPartialTypingsObj>(contentsMap, (fileContent, fileName) => {
+				return Util.objectForEach<string, ModuleMappingPartialTypingsObj>(contentsMap, (fileContent, fileName: string) => {
 					return getTypings(fileContent, fileName, Util.getFileType(fileName));
 				}, splitTypings);
 			}
