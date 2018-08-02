@@ -18,7 +18,7 @@ notifications:
 deploy:
   provider: npm
   email: awsdfgvhbjn@gmail.com
-  skip_cleaup: true
+  skip_cleanup: true
   api_key:
     secure: GISRvThQeRz1+PwNmc1VIguXfiG+8Q+QD/EksxjbCVPdVWo3eiUqXIVbpez8UwHh9QKD53KwYPknspdbAfV7LFqHQh0dxMm5KS+4pKZYyNMNCCNevD+SYPikIw71zEMgzxBMIPcCAOKqHWHuLu3A5XQ0xrCeERWBToPZ76SRd5Q+/D4Ep5F1rRdICnUe2X9mXLUMiWRT6szgfr/h8qgGFDwlSo4J5hjGr/8VdRx47Rz8mcXI3UT8BDzQ6tskmJ+ZTeYJJrcrPZceoyn6vIh7BuD0++hU3r7yamhHUrpCfXxZyeUPzKda83YtsY/Vzk9asyQ7nq7x5gb8/euIDuh6tNRj/uyM21niPlUhb1S5Ti2xxQLO2eYG/8w9AQiBCfXlt3eHv37OXrjVWpZcD0eGbY3DOrL+XDZbuabLt84G/I3s52dGlhHAPaWF4iXN+uuVNGTTlrLK75rQ4DBSaMfMZrZWkjaqz12cH6YU8DdFEM5owpgcPEvb/E7r+le7+G+JistHgiHSNZV8Z75zqNuPCKWrYIBn/VWu1T4+Xn1KHapBgZbJ8Gl9QPqm2GQPSgV+LSew9jE936wSm+1v/C/hdjJHop9DubrRyZKb4o/AXrlMcrIr+dJBR94OwPJBVrlr3GajgtwZC2axuCpTYAFG/1Gq3L2iSS2jdIoHBYEix2g=
   on:
