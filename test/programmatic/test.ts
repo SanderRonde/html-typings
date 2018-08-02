@@ -87,9 +87,19 @@ async function tsCompile(input: string) {
 		if (diagnostics.map((diagnostic) => {
 			return diagnostic.messageText.toString().indexOf('Cannot find name') === -1;
 		}).filter(val => val).length > 0) {
-			throw new Error(JSON.stringify(diagnostics.map(({ code, file, category, messageText, source, start }) => {
+			throw new Error(JSON.stringify(diagnostics.map(({ 
+				code, 
+				file: { fileName }, 
+				category, 
+				messageText,
+				source, 
+				start 
+			}) => {
+				if (typeof messageText !== 'string') {
+					messageText = messageText.messageText;
+				}
 				return {
-					code, file, category, messageText, source, start
+					code, fileName, category, messageText, source, start
 				}
 			})));
 		}
