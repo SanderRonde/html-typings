@@ -173,7 +173,7 @@ namespace Util {
 
 namespace Files {
 	export function getInputFiles(files: string|string[]): Promise<string[]> {
-		return new Promise((resolve, reject) => {
+		return new Promise((resolve) => {
 			if (Array.isArray(files)) {
 				resolve(files.map(Util.getFilePath));
 				return;
