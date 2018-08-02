@@ -5,7 +5,7 @@ branches:
   - /.*/
 before_install:
 - npm install mocha -g
-- npm install typescript -g
+- npm install typescript@latest -g
 install:
 - npm install
 script:
