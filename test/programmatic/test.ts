@@ -84,9 +84,11 @@ async function tsCompile(input: string) {
 	const diagnostics = ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics);
 
 	if (diagnostics.length > 0 || emitResult.emitSkipped) {
-		if (diagnostics.map((diagnostic) => {
-			return diagnostic.messageText.toString().indexOf('Cannot find name') === -1;
-		}).filter(val => val).length > 0) {
+		if (diagnostics.filter((diagnostic) => {
+			const msg = diagnostic.messageText.toString();
+			return msg.indexOf('Cannot find name') === -1 &&
+				msg.indexOf('TagMap[T]\' does not satisfy the constraint \'Node\'.') === -1;
+		}).length > 0) {
 			throw new Error(JSON.stringify(diagnostics.map(({ 
 				code, 
 				file: { fileName }, 
