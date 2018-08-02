@@ -9,6 +9,8 @@ import { Gaze }  from 'gaze';
 import { Glob } from 'glob';
 import fs = require('fs');
 
+const EXTENSIONS = ['html', 'pug', 'jade'];
+
 namespace Input {
 	const parser = new ArgumentParser({
 		addHelp: true,
@@ -175,7 +177,13 @@ namespace Files {
 	export function getInputFiles(files: string|string[]): Promise<string[]> {
 		return new Promise((resolve) => {
 			if (Array.isArray(files)) {
-				resolve(files.map(Util.getFilePath));
+				Promise.all(files.map(file => getInputFiles(file))).then((matches) => {
+					const matched: string[] = [];
+					for (const match of matches) {
+						matched.push(...match);
+					}
+					resolve(matched);
+				});
 				return;
 			}
 			new Glob(Util.getFilePath(files), {
@@ -947,7 +955,9 @@ export async function extractFolderTypes(folder: string): Promise<string>;
 export async function extractFolderTypes(folder: string, getTypesObj: boolean): Promise<TypingsObj>;
 export async function extractFolderTypes(folder: string, getTypesObj = false): Promise<string|TypingsObj> {
 	folder = Util.endsWith(folder, '/') ? folder : `${folder}/`;
-	const typings = await Main.Conversion.Extraction.getTypingsForInput(`${folder}**/*.html`);
+	const typings = await Main.Conversion.Extraction.getTypingsForInput(EXTENSIONS.map((extension) => {
+		return `${folder}**/*.${extension}`;
+	}));
 	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings);
 }
 
