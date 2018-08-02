@@ -179,14 +179,14 @@ namespace Files {
 				return;
 			}
 			new Glob(Util.getFilePath(files), {
-				absolute: true
+				absolute: true,
+				nodir: true
 			}, (err, matches) => {
 				if (err) {
 					Logging.error('Error reading input', err);
 					Logging.exit(2);
 				} else {
-					const nonDirMatches = matches.filter(match => !Util.endsWith(match, '/'));
-					resolve(nonDirMatches);
+					resolve(matches);
 				}
 			});
 		});
