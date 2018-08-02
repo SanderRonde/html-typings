@@ -2,7 +2,7 @@ language: node_js
 node_js: node
 branches:
   only:
-  - /.*/
+  - "/.*/"
 before_install:
 - npm install mocha -g
 - npm install typescript@latest -g
@@ -18,9 +18,8 @@ notifications:
 deploy:
   provider: npm
   email: awsdfgvhbjn@gmail.com
-  skip_cleanup: true
   api_key:
-    secure: X5XU/fXeF4IocjblhCMB7oz9VDMCRXGTPyMw4PebGuFKzrMNbL7N8MPmuiLDBbAyu+I1S7IRpyCHdfwc0n9Zyb5kbkMD4Hp5CnTrGEQNFMdVGc1QUcX+SCQ73cB/YOF3WXVhOJK7qt8OWS7LgecSkVMTu0dwtj5M6NZzb4aCQ8QlltKvypc/4nR+WyQm38DtEJ9ZwTGq6xWB8DbIaHHWefrwxWcycpnyHUhG4M8zRCKGxNtbrJKQA8gdFA1OBoFBCPVFX04Prlv4diSTL0EH4ms6WXsq2u6gAc++6qxle1Mi2MHA2CzxK9vbJvvMrhobWyia6eRjkOWCSaiLdbpPCDAVKpPhC5otFW4L97nXo603u1Ujv96UuNFJWM+MoAGW89HvWpoGfhajwkSu4Tpx8e94kouKf0z4dvIaAmOAoR7MtAFev1Zd36F59YPkpjTjMcPstcitzNpmxgo8GAu87nb3jrtFmxqIpyc7rXM3y6RLAXUaZ6wf4/RxJNISrv7eY0Yg4SeTVUDFb04eRjX1El/kmOVyNqKfoOlUo8aoyf/NCYwB9qOSdPY7V9MvHSoX5MrcD7f3wpnu6ou/rCTaPX167Z14zP9FNQEx89XWrZdxnQGn9LhmEtVMbT9c6GuT568YVmvWpePckGRQggrHynRX6+59moZs83Dj8FLZwN4=
+    secure: L6kTnG130X0SaPMvLfRUkgAArKw+Xm5W+vHTnzuWi/1ehT7eQhanUvb7Hhj/Et1yDlnZHcF99eIWYdyHCnjWEaaybSv+rTjJsGFKdrR37Xk2gXfTwLQNHDyODGy1FmHgpSwD6NK4MY7PqcdcQMEDl2zHDzFgJZJ0KD3lIpHnOj/zYcsYzGTbqyPcT8SsbuerrAykM7M1QoJa/p1KgUoZdYHDdFZBN5pWI6FA01xvUa+3ngI3tZNtKqhEbR5RVq6nFvULc8SFUV5EB2x3wM1WlGyJC03qf6FlOkkuF8Mu92DXYCCfMUyXCZRTtkq56l2VbBPYXrxCEZDJaFTLdS0DJp3dthspDtAKV4njm4NIVt4ZFmvo9odKWn5Gu73+5rdXO8n6d+MJql+rnHAhlL4Xh/QDtWHGdoPR9DfUxKPdoZVh20lm3mZzAuTMxCd/56eMQ3BU9uoLvnEFwrqjrIGZ+wCg9Luy5+Mzez4g7q18q/KGpXrVrna9LBI5L4mhP805ms8xiu+qfvmtjIEMN2UOgZXj6zGjw2djHdPJkieAY6Ti/BFcyzSCNRgQVraTN6Wma5PVg0w3XnWWSyNR1uudZxemsvspyWKhto/4aKEKrTygXwGXX1deC4YShMdBIbiw2CRWt9K5AQ7w2l8lNNQmPs3oxbnyRr+A8G03DMlmhY8=
   on:
     tags: true
     repo: SanderRonde/html-typings
