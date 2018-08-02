@@ -946,7 +946,8 @@ export async function extractFileTypes(files: string|string[], getTypesObj = fal
 export async function extractFolderTypes(folder: string): Promise<string>;
 export async function extractFolderTypes(folder: string, getTypesObj: boolean): Promise<TypingsObj>;
 export async function extractFolderTypes(folder: string, getTypesObj = false): Promise<string|TypingsObj> {
-	const typings = await Main.Conversion.Extraction.getTypingsForInput(folder + '**/*.html');
+	folder = Util.endsWith(folder, '/') ? folder : `${folder}/`;
+	const typings = await Main.Conversion.Extraction.getTypingsForInput(`${folder}**/*.html`);
 	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings);
 }
 
