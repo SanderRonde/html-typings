@@ -13,6 +13,9 @@ interface TypingsObj {
 	classes: {
 		[key: string]: string;
 	};
+	tags: {
+		[key: string]: string;
+	}
 }
 
 interface HTMLTypings {
