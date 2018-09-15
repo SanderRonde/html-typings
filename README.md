@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/SanderRonde/html-typings.svg?branch=master)](https://travis-ci.org/SanderRonde/html-typings)
 [![npm version](https://badge.fury.io/js/html-typings.svg)](https://badge.fury.io/js/html-typings)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FSanderRonde%2Fhtml-typings.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FSanderRonde%2Fhtml-typings?ref=badge_shield)
 
 # HTML Typings
 
@@ -123,3 +124,7 @@ htmlTypings.extractFileTypes(path).then((result) => {
 	//Do something
 });
 ```
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FSanderRonde%2Fhtml-typings.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2FSanderRonde%2Fhtml-typings?ref=badge_large)
