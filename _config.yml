@@ -17,8 +17,8 @@ title: HTML-Typings Playground
 email: awsdfgvhbjn@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
   A place for you to test out the HTML-typings package
-baseurl: "/html-typings" # the subpath of your site, e.g. /blog
-url: "http://demo.sanderron.de/" # the base hostname & protocol for your site, e.g. http://example.com
+baseurl: "/" # the subpath of your site, e.g. /blog
+url: "http://html-typings.sanderron.de/" # the base hostname & protocol for your site, e.g. http://example.com
 github_username:  sanderronde
 
 # Build settings
