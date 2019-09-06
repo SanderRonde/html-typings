@@ -1,4 +1,3 @@
-/// <reference path="defs.d.ts"/>
 /// <reference path="../../../node_modules/monaco-editor/monaco.d.ts" />
 /// <reference path="../../../typings/html-typings.d.ts" />
 
