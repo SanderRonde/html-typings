@@ -15,6 +15,7 @@ before_deploy:
 - grunt copyFiles
 - grunt genDefs
 - tsc
+- tsc -p docs/tsconfig.json
 
 notifications:
   email:
