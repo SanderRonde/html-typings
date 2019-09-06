@@ -65,3 +65,7 @@ test/**/testInput.html
 test/**/testInput1.html
 
 .vscode/
+
+docs/assets/
+!docs/assets/js
+!docs/assets/css
