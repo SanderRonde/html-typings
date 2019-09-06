@@ -25,7 +25,7 @@ var DEFAULT_CONTENTS = {
     waitFor('require', function () {
         window.require.config({
             paths: {
-                'vs': '/html-typings/assets/monaco-editor/min/vs'
+                'vs': '/assets/monaco-editor/min/vs'
             }
         });
         window.require(['vs/editor/editor.main'], function () {
@@ -172,7 +172,7 @@ var DEFAULT_CONTENTS = {
     (function () {
         function loadDefs(path, name) {
             var xhr = new XMLHttpRequest();
-            xhr.open('GET', location.origin + "/html-typings" + path);
+            xhr.open('GET', location.origin + "/" + path);
             xhr.onload = function () {
                 if (xhr.readyState === xhr.DONE) {
                     if (xhr.status === 200) {
