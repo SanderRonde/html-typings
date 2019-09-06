@@ -167,7 +167,7 @@ namespace Util {
 		const newObj: Partial<T> = {};
 		const keys = Object.getOwnPropertyNames(obj).sort();
 		keys.forEach((key) => {
-			newObj[key] = obj[key];
+			newObj[key as keyof typeof newObj] = obj[key];
 		});
 		return newObj as T;
 	}
@@ -1023,7 +1023,7 @@ export function cli(args: string[]): {
 	}
 }
 
-interface HTMLTypingsWindow extends Window {
+type HTMLTypingsWindow = typeof window & {
 	htmlTypings: {
 		extractStringTypes: typeof extractStringTypes;
 		extractGlobTypes: typeof extractGlobTypes;
