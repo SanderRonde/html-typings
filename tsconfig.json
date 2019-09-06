@@ -1,7 +1,6 @@
 {
     "compilerOptions": {
         "alwaysStrict": true,
-        "baseUrl": "./typings/",
         "forceConsistentCasingInFileNames": true,
         "module": "commonjs",
         "noImplicitAny": true,
@@ -12,15 +11,14 @@
         "pretty": true,
         "noFallthroughCasesInSwitch": true,
         "noImplicitReturns": true,
-        "noUnusedLocals": true,
-        "target": "es6",
+		"noUnusedLocals": true,
+		"sourceMap": true,
+        "target": "es3",
         "experimentalDecorators": true
 	}, 
     "allowJs": true,
     "compileOnSave": true,
     "include": [
-		"app/",
-        "test/test.ts",
-        "tasks/html-typings.ts"
+		"assets/js/js.ts"
     ]
 }
