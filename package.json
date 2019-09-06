@@ -41,11 +41,10 @@
   "devDependencies": {
     "@types/argparse": "^1.0.33",
     "@types/chai": "^4.0.4",
-    "@types/es6-promise": "^0.0.33",
     "@types/glob": "^5.0.32",
     "@types/htmlparser2": "^3.7.31",
     "@types/mocha": "^2.2.43",
-    "@types/node": "^8.5.2",
+    "@types/node": "^12.7.4",
     "chai": "^4.1.2",
     "grunt": "^1.0.3",
     "grunt-browserify": "^5.2.0",
