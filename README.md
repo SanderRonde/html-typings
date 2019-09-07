@@ -5,7 +5,7 @@
 # HTML Typings
 
 Generates typings for HTML selectors based on your HTML files.
-[Try it out](https://sanderronde.github.io/html-typings)
+[Try it out](https://html-typings.sanderron.de)
 
 ## Installing
 
