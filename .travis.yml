@@ -36,5 +36,6 @@ deploy:
   keep_history: true
   skip_cleanup: true
   on:
+    tags: true
     branch: master
   local_dir: "./docs"
