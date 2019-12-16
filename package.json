@@ -52,7 +52,7 @@
     "mocha": "5.2.0",
     "mocha-steps": "^1.1.0",
     "monaco-editor": "^0.10.1",
-    "typescript": "^3.6.2"
+    "typescript": "^3.7.3"
   },
   "typings": "typings/html-typings.d.ts"
 }
