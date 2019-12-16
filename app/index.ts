@@ -29,6 +29,10 @@ namespace Input {
 		help: 'Watch for HTML file changes',
 		action: 'storeTrue'
 	});
+	parser.addArgument(['-e', '--export'], {
+		help: 'Export all interfaces',
+		action: 'storeTrue'
+	})
 
 	export function parse(programArgs?: string[]) {
 		args = parser.parseArgs(programArgs);
@@ -38,6 +42,7 @@ namespace Input {
 		input: string;
 		output: string;
 		watch: boolean;
+		export: boolean;
 	};
 }
 
@@ -228,29 +233,30 @@ namespace Files {
 
 namespace Main {
 	namespace Constants {
-		export const getFileTemplate = (selectorMap: string, idMap: string, classMap: string, moduleMap: string, tagMap: string) => {
+		export const getFileTemplate = (selectorMap: string, idMap: string, classMap: string, moduleMap: string, tagMap: string, doExport: boolean) => {
+			const prefix = doExport ? 'export ' : '';
 			return `interface SelectorMap ${selectorMap}
 
-interface IDMap ${idMap}
+${prefix}interface IDMap ${idMap}
 
-interface ClassMap ${classMap}
+${prefix}interface ClassMap ${classMap}
 
-interface ModuleMap ${moduleMap}
+${prefix}interface ModuleMap ${moduleMap}
 
-interface TagMap ${tagMap}
+${prefix}interface TagMap ${tagMap}
 
-interface NodeSelector {
+${prefix}interface NodeSelector {
 	querySelector<T extends keyof SelectorMap>(selector: T): SelectorMap[T];
 	querySelectorAll<T extends keyof SelectorMap>(selector: T): SelectorMap[T][];
 }
 
-interface Document {
+${prefix}interface Document {
 	getElementById<T extends keyof IDMap>(elementId: T): IDMap[T];
 	getElementsByClassName<T extends keyof ClassMap>(classNames: string): HTMLCollectionOf<ClassMap[T]>
 	getElementsByTagName<T extends keyof TagMap>(tagName: T): NodeListOf<TagMap[T]>;
 }
 
-type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
+${prefix}type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 		}
 
 		export function getTagType(name: string) {
@@ -796,8 +802,9 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 			export function convertToDefsFile(typings: TypingsObj) {
 				const { classes, ids, modules, selectors, tags } = typings;
 				return Constants.getFileTemplate(Prettifying.formatTypings(selectors), 
-				Prettifying.formatTypings(ids), Prettifying.formatTypings(classes), 
-				Prettifying.formatTypings(modules), Prettifying.formatTypings(tags));
+					Prettifying.formatTypings(ids), Prettifying.formatTypings(classes), 
+					Prettifying.formatTypings(modules), Prettifying.formatTypings(tags),
+					Input.args.export);
 			}			
 		}
 	}

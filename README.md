@@ -97,7 +97,7 @@ const specialElementManual = document.getElementById('specialEl') as HTMLElement
 ## Command-line usage
 
 ```bash
-html-typings [-h] -i INPUT -o OUT_FILE
+html-typings [-h] [-e] [-w] -i INPUT -o OUT_FILE
 ```
 
 Where INPUT can be either a glob pattern, the path to a file or the path to a folder. The contents of the folder will be scanned recursively for HTML files to use.
