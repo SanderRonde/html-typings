@@ -33,11 +33,18 @@ var Input;
         required: true
     });
     parser.addArgument(['-o', '--output'], {
-        help: 'The location to output the typings to',
-        required: true
+        help: 'The location to output the typings to, required if --separate is not passed'
     });
     parser.addArgument(['-w', '--watch'], {
         help: 'Watch for HTML file changes',
+        action: 'storeTrue'
+    });
+    parser.addArgument(['-e', '--export'], {
+        help: 'Export all interfaces',
+        action: 'storeTrue'
+    });
+    parser.addArgument(['-s', '--separate'], {
+        help: 'Separate the querymaps when given multiple input files. Will output the files alongside the input files',
         action: 'storeTrue'
     });
     function parse(programArgs) {
@@ -91,6 +98,12 @@ var Util;
         return path.join(process.cwd().trim(), filePath.trim());
     }
     Util.getFilePath = getFilePath;
+    function toQuerymapPath(filePath) {
+        const stripped = filePath.split('.')[0];
+        const appended = `${stripped}-querymap`;
+        return `${appended}.d.ts`;
+    }
+    Util.toQuerymapPath = toQuerymapPath;
     function endsWith(str, end) {
         return str.lastIndexOf(end) === str.length - end.length;
     }
@@ -151,6 +164,14 @@ var Util;
         return newObj;
     }
     Util.sortObj = sortObj;
+    function arrToObj(arr) {
+        const obj = {};
+        for (const [key, value] of arr) {
+            obj[key] = value;
+        }
+        return obj;
+    }
+    Util.arrToObj = arrToObj;
 })(Util || (Util = {}));
 var Files;
 (function (Files) {
@@ -210,29 +231,30 @@ var Main;
 (function (Main) {
     let Constants;
     (function (Constants) {
-        Constants.getFileTemplate = (selectorMap, idMap, classMap, moduleMap, tagMap) => {
+        Constants.getFileTemplate = (selectorMap, idMap, classMap, moduleMap, tagMap, doExport) => {
+            const prefix = doExport ? 'export ' : '';
             return `interface SelectorMap ${selectorMap}
 
-interface IDMap ${idMap}
+${prefix}interface IDMap ${idMap}
 
-interface ClassMap ${classMap}
+${prefix}interface ClassMap ${classMap}
 
-interface ModuleMap ${moduleMap}
+${prefix}interface ModuleMap ${moduleMap}
 
-interface TagMap ${tagMap}
+${prefix}interface TagMap ${tagMap}
 
-interface NodeSelector {
+${prefix}interface NodeSelector {
 	querySelector<T extends keyof SelectorMap>(selector: T): SelectorMap[T];
 	querySelectorAll<T extends keyof SelectorMap>(selector: T): SelectorMap[T][];
 }
 
-interface Document {
+${prefix}interface Document {
 	getElementById<T extends keyof IDMap>(elementId: T): IDMap[T];
 	getElementsByClassName<T extends keyof ClassMap>(classNames: string): HTMLCollectionOf<ClassMap[T]>
 	getElementsByTagName<T extends keyof TagMap>(tagName: T): NodeListOf<TagMap[T]>;
 }
 
-type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
+${prefix}type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
         };
         function getTagType(name) {
             switch (name) {
@@ -607,17 +629,17 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
                 }
             }
             Extraction.getTypings = getTypings;
-            function writeToOutput(typings) {
+            function writeToOutput(typings, outPath = Input.args.output) {
                 return __awaiter(this, void 0, void 0, function* () {
                     return new Promise((resolve, reject) => {
-                        fs.writeFile(Util.getFilePath(Input.args.output), Joining.convertToDefsFile(typings), (err) => {
+                        fs.writeFile(Util.getFilePath(outPath), Joining.convertToDefsFile(typings), (err) => {
                             if (err) {
                                 Logging.error('Error writing to file');
                                 reject(err);
                             }
                             else {
                                 if (!Input.args.watch) {
-                                    Logging.log('Output to', Util.getFilePath(Input.args.output));
+                                    Logging.log('Output typings to', Util.getFilePath(outPath));
                                 }
                                 resolve();
                             }
@@ -628,8 +650,13 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
             Extraction.writeToOutput = writeToOutput;
             function extractTypes(files) {
                 return __awaiter(this, void 0, void 0, function* () {
-                    const typings = yield getTypingsForInput(Input.args.input, files);
-                    return writeToOutput(typings);
+                    const inFiles = files || (yield Files.getInputFiles(Input.args.input));
+                    if (inFiles.length !== 1 && !Input.args.output && Input.args.output !== '') {
+                        Logging.error('Argument "-o\/--output" is required when not using -s option and passing multiple files');
+                        Logging.exit(1);
+                    }
+                    const typings = yield getTypingsForInput(Input.args.input, inFiles);
+                    return writeToOutput(typings, Input.args.output || Util.toQuerymapPath(files[0]));
                 });
             }
             Extraction.extractTypes = extractTypes;
@@ -655,6 +682,63 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
         })(Extraction = Conversion.Extraction || (Conversion.Extraction = {}));
         let Joining;
         (function (Joining) {
+            function mergeModules(types) {
+                let selectorMap = {};
+                const moduleMap = {};
+                let idMap = {};
+                const allClassTypes = {};
+                const tagNameMap = {};
+                for (let fileName in types) {
+                    for (let moduleName in types[fileName]) {
+                        const typeMap = types[fileName][moduleName];
+                        if (moduleName !== '__default__') {
+                            moduleMap[fileName][moduleName] = Util.removeKeysFirstChar(typeMap.ids);
+                            tagNameMap[fileName][moduleName] = Constants.getTagType(moduleName);
+                            selectorMap[fileName][moduleName] = tagNameMap[fileName][moduleName];
+                        }
+                        idMap[fileName] = Object.assign(Object.assign({}, idMap[fileName]), Util.removeKeysFirstChar(typeMap.ids));
+                        selectorMap[fileName] = Object.assign(Object.assign({}, selectorMap[fileName]), typeMap.ids);
+                        typeMap.classes.forEach((typeMapClass) => {
+                            const [className, tagName] = typeMapClass;
+                            allClassTypes[fileName] = allClassTypes[fileName] || {};
+                            if (className in allClassTypes[fileName]) {
+                                if (allClassTypes[fileName][className].indexOf(tagName) === -1) {
+                                    allClassTypes[fileName][className].push(tagName);
+                                }
+                            }
+                            else {
+                                allClassTypes[fileName][className] = [tagName];
+                            }
+                        });
+                    }
+                }
+                const joinedClassNames = {};
+                Object.getOwnPropertyNames(allClassTypes).forEach((fileName) => {
+                    selectorMap[fileName] = selectorMap[fileName] || {};
+                    joinedClassNames[fileName] = joinedClassNames[fileName] || {};
+                    Object.getOwnPropertyNames(allClassTypes[fileName]).forEach((className) => {
+                        selectorMap[fileName][`.${className}`] = allClassTypes[fileName][className].sort().join('|');
+                        joinedClassNames[fileName][className] = allClassTypes[fileName][className].sort().join('|');
+                    });
+                });
+                const fileNames = [
+                    ...Object.keys(selectorMap),
+                    ...Object.keys(moduleMap),
+                    ...Object.keys(idMap),
+                    ...Object.keys(joinedClassNames),
+                    ...Object.keys(tagNameMap)
+                ].filter((v, i, a) => a.indexOf(v) === i);
+                return Util.arrToObj(fileNames.map((fileName) => {
+                    return [fileName, {
+                            selectors: Util.sortObj(selectorMap[fileName] || {}),
+                            modules: Util.sortObj(moduleMap[fileName] || {}),
+                            ids: Util.sortObj(idMap[fileName] || {}),
+                            classes: Util.sortObj(joinedClassNames[fileName] || {}),
+                            tags: Util.sortObj(tagNameMap[fileName] || {})
+                        }];
+                }));
+            }
+            Joining.mergeModules = mergeModules;
             function mergeTypes(types) {
                 let selectorMap = {};
                 const moduleMap = {};
@@ -700,7 +784,7 @@ type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
             Joining.mergeTypes = mergeTypes;
             function convertToDefsFile(typings) {
                 const { classes, ids, modules, selectors, tags } = typings;
-                return Constants.getFileTemplate(Prettifying.formatTypings(selectors), Prettifying.formatTypings(ids), Prettifying.formatTypings(classes), Prettifying.formatTypings(modules), Prettifying.formatTypings(tags));
+                return Constants.getFileTemplate(Prettifying.formatTypings(selectors), Prettifying.formatTypings(ids), Prettifying.formatTypings(classes), Prettifying.formatTypings(modules), Prettifying.formatTypings(tags), (Input.args && Input.args.export) || false);
             }
             Joining.convertToDefsFile = convertToDefsFile;
         })(Joining = Conversion.Joining || (Conversion.Joining = {}));
@@ -726,11 +810,29 @@ function watchFiles(input, callback) {
 }
 function doWatchCompilation(files, previousTypings) {
     return __awaiter(this, void 0, void 0, function* () {
-        const splitTypings = yield Main.Conversion.Extraction.getSplitTypings(Input.args.input, files, previousTypings);
+        const splitTypings = yield Main.Conversion.Extraction.getSplitTypings('', files, previousTypings);
         const joinedTypes = Main.Conversion.Joining.mergeTypes(splitTypings);
-        Main.Conversion.Extraction.writeToOutput(joinedTypes).then(() => {
-            Logging.log('Generated typings');
-        }).catch((err) => {
+        Main.Conversion.Extraction.writeToOutput(joinedTypes).catch(() => {
+            Logging.exit(1);
+        });
+        return splitTypings;
+    });
+}
+function doSplitWatchCompilationAll(files) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const splitTypings = Main.Conversion.Joining.mergeModules(yield Main.Conversion.Extraction.getSplitTypings('', files));
+        for (const keyPath in splitTypings) {
+            Main.Conversion.Extraction.writeToOutput(splitTypings[keyPath], Util.toQuerymapPath(keyPath)).catch(() => {
+                Logging.exit(1);
+            });
+        }
+        return splitTypings;
+    });
+}
+function doSingleFileWatchCompilation(file) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const splitTypings = yield Main.Conversion.Extraction.getTypingsForInput('', [file]);
+        Main.Conversion.Extraction.writeToOutput(splitTypings, Util.toQuerymapPath(file)).catch(() => {
             Logging.exit(1);
         });
         return splitTypings;
@@ -756,6 +858,11 @@ function main() {
             Logging.exit(0);
         };
         if (Input.args.watch) {
+            if (!Input.args.separate && !Input.args.output && Input.args.output !== '') {
+                Logging.error('Argument "-o\/--output" is required when not using -s option and using watch mode');
+                Logging.exit(1);
+                return;
+            }
             let splitTypings = null;
             let input = Input.args.input;
             if (Util.endsWith(Input.args.input, '/') ||
@@ -767,10 +874,22 @@ function main() {
             }
             watcher = watchFiles(input, (changedFile, files) => __awaiter(this, void 0, void 0, function* () {
                 Logging.log('File(s) changed, re-generating typings for new file(s)');
-                delete splitTypings[changedFile];
-                splitTypings = yield doWatchCompilation(files, splitTypings);
+                if (splitTypings && changedFile in splitTypings) {
+                    delete splitTypings[changedFile];
+                }
+                if (Input.args.separate) {
+                    yield doSingleFileWatchCompilation(changedFile);
+                }
+                else {
+                    splitTypings = yield doWatchCompilation(files, splitTypings);
+                }
             }));
-            splitTypings = yield doWatchCompilation(getWatched(watcher), {});
+            if (Input.args.separate) {
+                yield doSplitWatchCompilationAll(getWatched(watcher));
+            }
+            else {
+                splitTypings = yield doWatchCompilation(getWatched(watcher), {});
+            }
         }
         else {
             Main.Conversion.Extraction.extractTypes().then(() => {
@@ -820,13 +939,19 @@ function extractFolderTypes(folder, getTypesObj = false) {
     });
 }
 exports.extractFolderTypes = extractFolderTypes;
-function addToHandlers(handlers, event, handler) {
+function addToHandlers(handlers, prevOutput, event, handler) {
     if (event === 'exit' || event === 'error' || event === 'log') {
         if (event === 'exit') {
             handlers[event].push(handler);
+            if (prevOutput.exit !== null) {
+                handler(prevOutput.exit);
+            }
         }
         else {
             handlers[event].push(handler);
+            prevOutput[event].forEach((out) => {
+                handler(...out);
+            });
         }
     }
 }
@@ -836,18 +961,26 @@ function cli(args) {
         error: [],
         log: []
     };
+    const output = {
+        exit: null,
+        error: [],
+        log: []
+    };
     Logging.handle({
         exit(code) {
+            output.exit = code;
             handlers.exit.forEach((handler) => {
                 handler(code);
             });
         },
         error(...args) {
+            output.error.push(args);
             handlers.error.forEach((handler) => {
                 handler(...args);
             });
         },
         log(...args) {
+            output.log.push(args);
             handlers.log.forEach((handler) => {
                 handler(...args);
             });
@@ -857,13 +990,16 @@ function cli(args) {
     const close = main();
     return {
         on(event, handler) {
-            addToHandlers(handlers, event, handler);
+            addToHandlers(handlers, output, event, handler);
         },
         addEventListener(event, handler) {
-            addToHandlers(handlers, event, handler);
+            addToHandlers(handlers, output, event, handler);
         },
         quit() {
             close();
+        },
+        get hasQuit() {
+            return output.exit !== null;
         }
     };
 }
@@ -10543,7 +10679,7 @@ function hexSlice (buf, start, end) {
 
   var out = ''
   for (var i = start; i < end; ++i) {
-    out += toHex(buf[i])
+    out += hexSliceLookupTable[buf[i]]
   }
   return out
 }
@@ -11129,11 +11265,6 @@ function base64clean (str) {
   return str
 }
 
-function toHex (n) {
-  if (n < 16) return '0' + n.toString(16)
-  return n.toString(16)
-}
-
 function utf8ToBytes (string, units) {
   units = units || Infinity
   var codePoint
@@ -11263,6 +11394,20 @@ function numberIsNaN (obj) {
   // For IE11 support
   return obj !== obj // eslint-disable-line no-self-compare
 }
+
+// Create lookup table for `toString('hex')`
+// See: https://github.com/feross/buffer/issues/219
+var hexSliceLookupTable = (function () {
+  var alphabet = '0123456789abcdef'
+  var table = new Array(256)
+  for (var i = 0; i < 16; ++i) {
+    var i16 = i * 16
+    for (var j = 0; j < 16; ++j) {
+      table[i16 + j] = alphabet[i] + alphabet[j]
+    }
+  }
+  return table
+})()
 
 }).call(this,require("buffer").Buffer)
 },{"base64-js":31,"buffer":35,"ieee754":85}],36:[function(require,module,exports){
@@ -11790,7 +11935,7 @@ var render = (module.exports = function(dom, opts) {
   return output;
 });
 
-const foreignModeIntegrationPoints = [
+var foreignModeIntegrationPoints = [
   'mi',
   'mo',
   'mn',
@@ -18086,14 +18231,14 @@ var gOPD = Object.getOwnPropertyDescriptor;
 var tryRegexExecCall = function tryRegexExec(value) {
 	try {
 		var lastIndex = value.lastIndex;
-		value.lastIndex = 0;
+		value.lastIndex = 0; // eslint-disable-line no-param-reassign
 
 		regexExec.call(value);
 		return true;
 	} catch (e) {
 		return false;
 	} finally {
-		value.lastIndex = lastIndex;
+		value.lastIndex = lastIndex; // eslint-disable-line no-param-reassign
 	}
 };
 var toStr = Object.prototype.toString;
