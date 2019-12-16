@@ -22,8 +22,7 @@ namespace Input {
 		required: true
 	});
 	parser.addArgument(['-o', '--output'], {
-		help: 'The location to output the typings to',
-		required: true
+		help: 'The location to output the typings to, required if --separate is not passed'
 	});
 	parser.addArgument(['-w', '--watch'], {
 		help: 'Watch for HTML file changes',
@@ -32,7 +31,11 @@ namespace Input {
 	parser.addArgument(['-e', '--export'], {
 		help: 'Export all interfaces',
 		action: 'storeTrue'
-	})
+	});
+	parser.addArgument(['-s', '--separate'], {
+		help: 'Separate the querymaps when given multiple input files. Will output the files alongside the input files',
+		action: 'storeTrue'
+	});
 
 	export function parse(programArgs?: string[]) {
 		args = parser.parseArgs(programArgs);
@@ -43,6 +46,7 @@ namespace Input {
 		output: string;
 		watch: boolean;
 		export: boolean;
+		separate: boolean;
 	};
 }
 
@@ -94,6 +98,15 @@ namespace Util {
 			return filePath;
 		}
 		return path.join(process.cwd().trim(), filePath.trim());
+	}
+
+	export function toQuerymapPath(filePath: string): string {
+		// Strip it of all file extensions
+		const stripped = filePath.split('.')[0];
+		// Append to end
+		const appended = `${stripped}-querymap`;
+		// Add extension
+		return `${appended}.d.ts`;
 	}
 	
 	export function endsWith(str: string, end: string): boolean {
@@ -175,6 +188,18 @@ namespace Util {
 			newObj[key as keyof typeof newObj] = obj[key];
 		});
 		return newObj as T;
+	}
+
+	export function arrToObj<V>(arr: [string, V][]): {
+		[key: string]: V;
+	} {
+		const obj: {
+			[key: string]: V;
+		} = {};
+		for (const [ key, value ] of arr) {
+			obj[key] = value;
+		}
+		return obj;
 	}
 }
 
@@ -684,15 +709,15 @@ ${prefix}type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 				}
 			}
 			
-			export async function writeToOutput(typings: TypingsObj) {
+			export async function writeToOutput(typings: TypingsObj, outPath: string = Input.args.output) {
 				return new Promise((resolve, reject) => {
-					fs.writeFile(Util.getFilePath(Input.args.output), Joining.convertToDefsFile(typings), (err) => {
+					fs.writeFile(Util.getFilePath(outPath), Joining.convertToDefsFile(typings), (err) => {
 						if (err) {
 							Logging.error('Error writing to file');
 							reject(err);
 						} else {
 							if (!Input.args.watch) {
-								Logging.log('Output to', Util.getFilePath(Input.args.output));
+								Logging.log('Output typings to', Util.getFilePath(outPath));
 							}
 							resolve();
 						}
@@ -701,8 +726,13 @@ ${prefix}type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 			}
 
 			export async function extractTypes(files?: string[]) {
-				const typings = await getTypingsForInput(Input.args.input, files);
-				return writeToOutput(typings);
+				const inFiles = files || await Files.getInputFiles(Input.args.input);
+				if (inFiles.length !== 1 && !Input.args.output && Input.args.output !== '') {
+					Logging.error('Argument "-o\/--output" is required when not using -s option and passing multiple files');
+					Logging.exit(1);
+				}
+				const typings = await getTypingsForInput(Input.args.input, inFiles);
+				return writeToOutput(typings, Input.args.output || Util.toQuerymapPath(files[0]));
 			}
 
 			export async function getSplitTypings(input: string|string[], files?: string[], splitTypings: {
@@ -724,6 +754,108 @@ ${prefix}type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 		}
 
 		export namespace Joining {
+			export function mergeModules(types: {
+				[fileName: string]: {
+					[moduleName: string]: {
+						ids: {
+							[key: string]: string;
+						}
+						classes: [string, string][]
+						module?: string;
+					}
+				}
+			}) {
+				let selectorMap: {
+					[fileName: string]: {
+						[key: string]: string
+					}
+				} = {};
+			
+				const moduleMap: {
+					[fileName: string]: {
+						[moduleName: string]: {
+							[key: string]: string;
+						}
+					}
+				} = {};
+			
+				let idMap: {
+					[fileName: string]: {
+						[key: string]: string
+					}
+				} = {};
+			
+				const allClassTypes: {
+					[fileName: string]: {
+						[key: string]: string[]
+					}
+				} = {};
+
+				const tagNameMap: {
+					[fileName: string]: {
+						[key: string]: string;
+					}
+				} = {};
+			
+				for (let fileName in types) {
+					for (let moduleName in types[fileName]) {
+						const typeMap = types[fileName][moduleName];
+						if (moduleName !== '__default__') {
+							moduleMap[fileName][moduleName] = Util.removeKeysFirstChar(typeMap.ids);
+							tagNameMap[fileName][moduleName] = Constants.getTagType(moduleName);
+							selectorMap[fileName][moduleName] = tagNameMap[fileName][moduleName];
+						}
+						idMap[fileName] = { ...idMap[fileName], ...Util.removeKeysFirstChar(typeMap.ids) }
+						selectorMap[fileName] = { ...selectorMap[fileName], ...typeMap.ids }
+				
+						typeMap.classes.forEach((typeMapClass) => {
+							const [className, tagName] = typeMapClass;
+							allClassTypes[fileName] = allClassTypes[fileName] || {};
+							if (className in allClassTypes[fileName]) {
+								if (allClassTypes[fileName][className].indexOf(tagName) === -1) {
+									allClassTypes[fileName][className].push(tagName);
+								}
+							} else {
+								allClassTypes[fileName][className] = [tagName];
+							}
+						});
+					}
+				}
+			
+				const joinedClassNames: {
+					[fileName: string]: {
+						[key: string]: string;
+					}
+				} = {};
+			
+				Object.getOwnPropertyNames(allClassTypes).forEach((fileName: string) => {
+					selectorMap[fileName] = selectorMap[fileName] || {};
+					joinedClassNames[fileName] = joinedClassNames[fileName] || {};
+					Object.getOwnPropertyNames(allClassTypes[fileName]).forEach((className: string) => {
+						selectorMap[fileName][`.${className}`] = allClassTypes[fileName][className].sort().join('|');
+						joinedClassNames[fileName][className] = allClassTypes[fileName][className].sort().join('|');
+					});
+				});
+			
+				const fileNames = [
+					...Object.keys(selectorMap),
+					...Object.keys(moduleMap),
+					...Object.keys(idMap),
+					...Object.keys(joinedClassNames),
+					...Object.keys(tagNameMap)
+				].filter((v, i, a) => a.indexOf(v) === i);
+
+				return Util.arrToObj(fileNames.map((fileName) => {
+					return [fileName, {
+						selectors: Util.sortObj(selectorMap[fileName] || {}),
+						modules: Util.sortObj(moduleMap[fileName] || {}),
+						ids: Util.sortObj(idMap[fileName] || {}),
+						classes: Util.sortObj(joinedClassNames[fileName] || {}),
+						tags: Util.sortObj(tagNameMap[fileName] || {})
+					}];
+				}));
+			}
+
 			export function mergeTypes(types: {
 				[fileName: string]: {
 					[moduleName: string]: {
@@ -804,8 +936,8 @@ ${prefix}type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 				return Constants.getFileTemplate(Prettifying.formatTypings(selectors), 
 					Prettifying.formatTypings(ids), Prettifying.formatTypings(classes), 
 					Prettifying.formatTypings(modules), Prettifying.formatTypings(tags),
-					Input.args.export);
-			}			
+					(Input.args &&  Input.args.export) || false);
+			}
 		}
 	}
 }
@@ -834,11 +966,27 @@ function watchFiles(input: string, callback: (changedFile: string, files: string
 async function doWatchCompilation(files: string[], previousTypings: {
 	[key: string]: Main.Conversion.Extraction.ModuleMappingPartialTypingsObj;
 }) {
-	const splitTypings = await Main.Conversion.Extraction.getSplitTypings(Input.args.input, files, previousTypings);
+	const splitTypings = await Main.Conversion.Extraction.getSplitTypings('', files, previousTypings);
 	const joinedTypes = Main.Conversion.Joining.mergeTypes(splitTypings);
-	Main.Conversion.Extraction.writeToOutput(joinedTypes).then(() => {
-		Logging.log('Generated typings');
-	}).catch((err) => {
+	Main.Conversion.Extraction.writeToOutput(joinedTypes).catch(() => {
+		Logging.exit(1);
+	});
+	return splitTypings;
+}
+
+async function doSplitWatchCompilationAll(files: string[]) {
+	const splitTypings = Main.Conversion.Joining.mergeModules(await Main.Conversion.Extraction.getSplitTypings('', files));
+	for (const keyPath in splitTypings) {
+		Main.Conversion.Extraction.writeToOutput(splitTypings[keyPath], Util.toQuerymapPath(keyPath)).catch(() => {
+			Logging.exit(1);
+		});
+	}
+	return splitTypings;
+}
+
+async function doSingleFileWatchCompilation(file: string) {
+	const splitTypings = await Main.Conversion.Extraction.getTypingsForInput('', [file]);
+	Main.Conversion.Extraction.writeToOutput(splitTypings, Util.toQuerymapPath(file)).catch(() => {
 		Logging.exit(1);
 	});
 	return splitTypings;
@@ -865,6 +1013,12 @@ function main() {
 			Logging.exit(0);
 		}
 		if (Input.args.watch) {
+			if (!Input.args.separate && !Input.args.output && Input.args.output !== '') {
+				Logging.error('Argument "-o\/--output" is required when not using -s option and using watch mode');
+				Logging.exit(1);
+				return;
+			}
+
 			let splitTypings: {
 				[key: string]: Main.Conversion.Extraction.ModuleMappingPartialTypingsObj;
 			} = null;
@@ -877,10 +1031,20 @@ function main() {
 				}
 			watcher = watchFiles(input, async (changedFile, files) => {
 				Logging.log('File(s) changed, re-generating typings for new file(s)');
-				delete splitTypings[changedFile];
-				splitTypings = await doWatchCompilation(files, splitTypings);
+				if (splitTypings && changedFile in splitTypings) {
+					delete splitTypings[changedFile];
+				}
+				if (Input.args.separate) {
+					await doSingleFileWatchCompilation(changedFile);
+				} else {
+					splitTypings = await doWatchCompilation(files, splitTypings);
+				}
 			});	
-			splitTypings = await doWatchCompilation(getWatched(watcher), {})
+			if (Input.args.separate) {
+				await doSplitWatchCompilationAll(getWatched(watcher));
+			} else {
+				splitTypings = await doWatchCompilation(getWatched(watcher), {})
+			}
 		} else {
 			Main.Conversion.Extraction.extractTypes().then(() => {
 				Logging.exit(0);
@@ -970,12 +1134,22 @@ export async function extractFolderTypes(folder: string, getTypesObj = false): P
 
 function addToHandlers<T extends {
 	[key: string]: P[]
-}, P>(handlers: T, event: 'exit'|'error'|'log', handler: P) {
+}, P extends Function>(handlers: T, prevOutput: {
+	exit: number|null;
+	error: string[][];
+	log: string[][];
+}, event: 'exit'|'error'|'log', handler: P) {
 	if (event === 'exit' || event === 'error' || event === 'log') {
 		if (event === 'exit') {
 			handlers[event].push(handler);
+			if (prevOutput.exit !== null) {
+				handler(prevOutput.exit);
+			}
 		} else {
 			handlers[event].push(handler);
+			prevOutput[event].forEach((out) => {
+				handler(...out);
+			});
 		}
 	}
 }
@@ -988,6 +1162,7 @@ export function cli(args: string[]): {
 	addEventListener(event: 'error', handler: (...args: any[]) => void): void;
 	addEventListener(event: 'log', handler: (...args: any[]) => void): void;
 	quit(): void;
+	hasQuit: boolean;
 } {
 	const handlers: {
 		exit: ((code: number) => void)[];
@@ -997,19 +1172,31 @@ export function cli(args: string[]): {
 		exit: [],
 		error: [],
 		log: []
-	}
+	};
+	const output: {
+		exit: number|null;
+		error: string[][];
+		log: string[][];
+	} = {
+		exit: null,
+		error: [],
+		log: []
+	};
 	Logging.handle({
 		exit(code) {
+			output.exit = code;
 			handlers.exit.forEach((handler) => {
 				handler(code);
 			});
 		},
 		error(...args: any[]) {
+			output.error.push(args);
 			handlers.error.forEach((handler) => {
 				handler(...args);
 			});
 		},
 		log(...args: any[]) {
+			output.log.push(args);
 			handlers.log.forEach((handler) => {
 				handler(...args);
 			});
@@ -1019,13 +1206,16 @@ export function cli(args: string[]): {
 	const close = main();
 	return {
 		on(event: 'exit'|'error'|'log', handler: (...args: any[]) => void) {
-			addToHandlers(handlers, event, handler);
+			addToHandlers(handlers, output, event, handler);
 		},
 		addEventListener(event: 'exit'|'error'|'log', handler: (...args: any[]) => void) {
-			addToHandlers(handlers, event, handler);
+			addToHandlers(handlers, output, event, handler);
 		},
 		quit() {
 			close();
+		},
+		get hasQuit() {
+			return output.exit !== null;
 		}
 	}
 }
