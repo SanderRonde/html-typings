@@ -281,7 +281,17 @@ ${prefix}interface Document {
 	getElementsByTagName<T extends keyof TagMap>(tagName: T): NodeListOf<TagMap[T]>;
 }
 
-${prefix}type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
+${prefix}type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];
+
+${doExport ? `export type SelectorMapType = ${selectorMap}
+
+export type IDMapType = ${idMap}
+
+export type ClassMapType = ${classMap}
+
+export type ModuleMap = ${moduleMap}
+
+export type TagMapType = ${tagMap}` : ''}`;
 		}
 
 		export function getTagType(name: string) {
