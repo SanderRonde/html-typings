@@ -742,6 +742,11 @@ export type TagMapType = ${tagMap}` : ''}`;
 					Logging.exit(1);
 				}
 				const typings = await getTypingsForInput(Input.args.input, inFiles);
+				return typings;
+			}
+
+			export async function extractTypesAndWrite(files?: string[]) {
+				const typings = await extractTypes(files);
 				return writeToOutput(typings, Input.args.output || Util.toQuerymapPath(files[0]));
 			}
 
@@ -1056,7 +1061,13 @@ function main() {
 				splitTypings = await doWatchCompilation(getWatched(watcher), {})
 			}
 		} else {
-			Main.Conversion.Extraction.extractTypes().then(() => {
+			(async () => {
+				if (Input.args.separate) {
+					return doSplitWatchCompilationAll(await Files.getInputFiles(Input.args.input));
+				} else {
+					return Main.Conversion.Extraction.extractTypesAndWrite();
+				}
+			})().then(() => {
 				Logging.exit(0);
 			}).catch(() => {
 				Logging.exit(1);
