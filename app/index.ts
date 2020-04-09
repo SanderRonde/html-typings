@@ -931,12 +931,12 @@ ${prefix}type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];`;
 				}
 			}
 
-			export function convertToDefsFile(typings: TypingsObj) {
+			export function convertToDefsFile(typings: TypingsObj, exportTypes: boolean = false) {
 				const { classes, ids, modules, selectors, tags } = typings;
 				return Constants.getFileTemplate(Prettifying.formatTypings(selectors), 
 					Prettifying.formatTypings(ids), Prettifying.formatTypings(classes), 
 					Prettifying.formatTypings(modules), Prettifying.formatTypings(tags),
-					(Input.args &&  Input.args.export) || false);
+					(Input.args &&  Input.args.export) || exportTypes);
 			}
 		}
 	}
@@ -1094,42 +1094,50 @@ export function extractStringTypes(fileContents: string, options: {
 	isPug?: boolean;
 	getTypesObj?: boolean|null;
 	pugPath?: string;
+	exportTypes?: boolean;
 } = {
 	isPug: false,
 	getTypesObj: false,
-	pugPath: null
+	pugPath: null,
+	exportTypes: false
 }): string|TypingsObj {
-	const { isPug, getTypesObj, pugPath } = options;
+	const { isPug, getTypesObj, pugPath , exportTypes} = options;
 
 	const typings = Main.Conversion.Joining.mergeTypes({
 		'string': Main.Conversion.Extraction.getTypings(fileContents, 
 			pugPath, isPug ? Util.FileTypes.PUG : Util.FileTypes.HTML)
 	});
-	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings);
+	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
 }
 
 export async function extractGlobTypes(glob: string): Promise<string>;
-export async function extractGlobTypes(glob: string, getTypesObj: boolean): Promise<TypingsObj>;
-export async function extractGlobTypes(glob: string, getTypesObj = false): Promise<string|TypingsObj> {
+export async function extractGlobTypes(glob: string, { exportTypes = false, getTypesObj = false }: {
+	getTypesObj?: boolean|null;
+	exportTypes?: boolean;
+} = {}): Promise<string|TypingsObj> {
 	const typings = await Main.Conversion.Extraction.getTypingsForInput(glob);
-	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings);
+	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
 }
 
 export async function extractFileTypes(files: string|string[]): Promise<string>;
-export async function extractFileTypes(files: string|string[], getTypesObj: boolean): Promise<TypingsObj>;
-export async function extractFileTypes(files: string|string[], getTypesObj = false): Promise<string|TypingsObj> {
+export async function extractFileTypes(files: string|string[], { exportTypes = false, getTypesObj = false }: {
+	getTypesObj?: boolean|null;
+	exportTypes?: boolean;
+} = {}): Promise<string|TypingsObj> {
 	const typings = await Main.Conversion.Extraction.getTypingsForInput(files);
-	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings);
+	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
 }
 
 export async function extractFolderTypes(folder: string): Promise<string>;
-export async function extractFolderTypes(folder: string, getTypesObj: boolean): Promise<TypingsObj>;
-export async function extractFolderTypes(folder: string, getTypesObj = false): Promise<string|TypingsObj> {
+export async function extractFolderTypes(folder: string, { exportTypes = false, getTypesObj = false }: {
+	getTypesObj?: boolean|null;
+	exportTypes?: boolean;
+} = {}): Promise<string|TypingsObj> {
 	folder = Util.endsWith(folder, '/') ? folder : `${folder}/`;
 	const typings = await Main.Conversion.Extraction.getTypingsForInput(EXTENSIONS.map((extension) => {
 		return `${folder}**/*.${extension}`;
 	}));
-	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings);
+	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
 }
 
 function addToHandlers<T extends {
