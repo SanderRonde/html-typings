@@ -289,7 +289,7 @@ export type IDMapType = ${idMap}
 
 export type ClassMapType = ${classMap}
 
-export type ModuleMap = ${moduleMap}
+export type ModuleMapType = ${moduleMap}
 
 export type TagMapType = ${tagMap}` : ''}`;
 		}
