@@ -280,10 +280,10 @@ ${prefix}interface Document {
 	getElementsByClassName<T extends keyof ClassMap>(classNames: string): HTMLCollectionOf<ClassMap[T]>
 	getElementsByTagName<T extends keyof TagMap>(tagName: T): NodeListOf<TagMap[T]>;
 }
+${doExport ? `
+export type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];
 
-${prefix}type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];
-
-${doExport ? `export type SelectorMapType = ${selectorMap}
+export type SelectorMapType = ${selectorMap}
 
 export type IDMapType = ${idMap}
 
