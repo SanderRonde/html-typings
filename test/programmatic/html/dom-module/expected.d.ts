@@ -438,5 +438,3 @@ interface Document {
 	getElementsByClassName<T extends keyof ClassMap>(classNames: string): HTMLCollectionOf<ClassMap[T]>
 	getElementsByTagName<T extends keyof TagMap>(tagName: T): NodeListOf<TagMap[T]>;
 }
-
-type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];
