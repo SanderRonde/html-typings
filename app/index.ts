@@ -260,7 +260,7 @@ namespace Main {
 	namespace Constants {
 		export const getFileTemplate = (selectorMap: string, idMap: string, classMap: string, moduleMap: string, tagMap: string, doExport: boolean) => {
 			const prefix = doExport ? 'export ' : '';
-			return `interface SelectorMap ${selectorMap}
+			return `${prefix}interface SelectorMap ${selectorMap}
 
 ${prefix}interface IDMap ${idMap}
 
