@@ -680,8 +680,10 @@ export type TagMapType = ${tagMap}` : ''}`;
 						}
 					}
 					if (attribs.class) {
-						this.maps[this.mapKey].classes.push([attribs.class, attribs['data-element-type'] || 
-							Constants.getTagType(name)]);
+						for (const className of attribs.class.split(' ')) {
+							this.maps[this.mapKey].classes.push([className, attribs['data-element-type'] || 
+								Constants.getTagType(name)]);
+						}
 					}
 				}
 
