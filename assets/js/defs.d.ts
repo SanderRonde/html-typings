@@ -3,17 +3,17 @@ interface SelectorMap {
 	"#sourceHTMLTab": HTMLDivElement;
 	"#sourceTSTab": HTMLDivElement;
 	"#tryEditor": HTMLDivElement;
+	".active": HTMLDivElement;
 	".checkout-package": HTMLSpanElement;
 	".container": HTMLDivElement;
 	".editor": HTMLDivElement;
 	".editorElement": HTMLDivElement;
 	".editorHeader": HTMLDivElement;
-	".editorHeader float-right": HTMLDivElement;
 	".editorName": HTMLDivElement;
 	".editorTab": HTMLDivElement;
-	".editorTab active": HTMLDivElement;
 	".editorTabs": HTMLDivElement;
 	".editors": HTMLDivElement;
+	".float-right": HTMLDivElement;
 	".mainContent": HTMLElement;
 	".page-header": HTMLElement;
 	".pageName": HTMLDivElement;
@@ -29,17 +29,17 @@ interface IDMap {
 }
 
 interface ClassMap {
+	"active": HTMLDivElement;
 	"checkout-package": HTMLSpanElement;
 	"container": HTMLDivElement;
 	"editor": HTMLDivElement;
 	"editorElement": HTMLDivElement;
 	"editorHeader": HTMLDivElement;
-	"editorHeader float-right": HTMLDivElement;
 	"editorName": HTMLDivElement;
 	"editorTab": HTMLDivElement;
-	"editorTab active": HTMLDivElement;
 	"editorTabs": HTMLDivElement;
 	"editors": HTMLDivElement;
+	"float-right": HTMLDivElement;
 	"mainContent": HTMLElement;
 	"page-header": HTMLElement;
 	"pageName": HTMLDivElement;
