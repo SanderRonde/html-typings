@@ -31,6 +31,8 @@
   },
   "homepage": "https://github.com/SanderRonde/html-typings#readme",
   "dependencies": {
+    "acorn": "^7.3.1",
+    "acorn-walk": "^7.2.0",
     "argparse": "^1.0.9",
     "gaze": "^1.1.2",
     "glob": "^7.1.2",

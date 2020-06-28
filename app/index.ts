@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 /// <reference path="../typings/gaze.d.ts"/>
 import { ArgumentParser } from 'argparse';
+import * as acornWalk from 'acorn-walk';
 import { Parser } from 'htmlparser2';
 import parse = require('pug-parser');
 import lex = require('pug-lexer');
+import * as acorn from 'acorn';
 import path = require('path');
-import { Gaze }  from 'gaze';
+import { Gaze } from 'gaze';
 import { Glob } from 'glob';
 import fs = require('fs');
 
@@ -15,26 +17,28 @@ namespace Input {
 	const parser = new ArgumentParser({
 		addHelp: true,
 		description: 'Generates typings for your HTML files',
-		debug: !!process.env.DEBUG_HTML_TYPINGS
+		debug: !!process.env.DEBUG_HTML_TYPINGS,
 	} as any);
 	parser.addArgument(['-i', '--input'], {
 		help: 'The path to a single file, a folder, or a glob pattern',
-		required: true
+		required: true,
 	});
 	parser.addArgument(['-o', '--output'], {
-		help: 'The location to output the typings to, required if --separate is not passed'
+		help:
+			'The location to output the typings to, required if --separate is not passed',
 	});
 	parser.addArgument(['-w', '--watch'], {
 		help: 'Watch for HTML file changes',
-		action: 'storeTrue'
+		action: 'storeTrue',
 	});
 	parser.addArgument(['-e', '--export'], {
 		help: 'Export all interfaces',
-		action: 'storeTrue'
+		action: 'storeTrue',
 	});
 	parser.addArgument(['-s', '--separate'], {
-		help: 'Separate the querymaps when given multiple input files. Will output the files alongside the input files',
-		action: 'storeTrue'
+		help:
+			'Separate the querymaps when given multiple input files. Will output the files alongside the input files',
+		action: 'storeTrue',
 	});
 
 	export function parse(programArgs?: string[]) {
@@ -108,15 +112,17 @@ namespace Util {
 		// Add extension
 		return `${appended}.d.ts`;
 	}
-	
+
 	export function endsWith(str: string, end: string): boolean {
 		return str.lastIndexOf(end) === str.length - end.length;
 	}
 
 	export function isHtmlFile(file: string): boolean {
-		return Util.endsWith(file, '.html') || 
-			Util.endsWith(file, '.jade') || 
-			Util.endsWith(file, '.pug');
+		return (
+			Util.endsWith(file, '.html') ||
+			Util.endsWith(file, '.jade') ||
+			Util.endsWith(file, '.pug')
+		);
 	}
 
 	export function getFileType(name: string): FILE_TYPE {
@@ -126,22 +132,33 @@ namespace Util {
 		if (endsWith(name, '.pug') || endsWith(name, '.jade')) {
 			return FILE_TYPE.PUG;
 		}
+		if (endsWith(name, '.js')) {
+			return FILE_TYPE.COMPILED_JSX;
+		}
 		return FILE_TYPE.HTML;
 	}
 
-	export function objectForEach<U, P, O extends {
-		[key: string]: U;
-	} = {
-		[key: string]: U;
-	}>(obj: O, map: (value: U, key: keyof O) => P, base: {
+	export function objectForEach<
+		U,
+		P,
+		O extends {
+			[key: string]: U;
+		} = {
+			[key: string]: U;
+		}
+	>(
+		obj: O,
+		map: (value: U, key: keyof O) => P,
+		base: {
+			[key: string]: P;
+		} = {}
+	): {
 		[key: string]: P;
-	} = {}): {
-		[key: string]: P
 	} {
 		const newObj: {
 			[key: string]: P;
 		} = {};
-	
+
 		for (let key in obj) {
 			if (key in base) {
 				newObj[key] = base[key];
@@ -149,7 +166,7 @@ namespace Util {
 				newObj[key] = map(obj[key], key);
 			}
 		}
-	
+
 		return newObj;
 	}
 
@@ -161,7 +178,7 @@ namespace Util {
 		const newObj: {
 			[key: string]: string;
 		} = {};
-	
+
 		for (let key in obj) {
 			const oldKey = key;
 			if (key.indexOf('#') === 0 || key.indexOf('.') === 0) {
@@ -169,13 +186,15 @@ namespace Util {
 			}
 			newObj[key] = obj[oldKey];
 		}
-	
+
 		return newObj;
 	}
 
-	export function sortObj<T extends {
-		[key: string]: any;
-	}>(obj: T): T {
+	export function sortObj<
+		T extends {
+			[key: string]: any;
+		}
+	>(obj: T): T {
 		const newObj: Partial<T> = {};
 		const keys = Object.getOwnPropertyNames(obj).sort();
 		keys.forEach((key) => {
@@ -184,13 +203,15 @@ namespace Util {
 		return newObj as T;
 	}
 
-	export function arrToObj<V>(arr: [string, V][]): {
+	export function arrToObj<V>(
+		arr: [string, V][]
+	): {
 		[key: string]: V;
 	} {
 		const obj: {
 			[key: string]: V;
 		} = {};
-		for (const [ key, value ] of arr) {
+		for (const [key, value] of arr) {
 			obj[key] = value;
 		}
 		return obj;
@@ -198,61 +219,79 @@ namespace Util {
 }
 
 namespace Files {
-	export function getInputFiles(files: string|string[]): Promise<string[]> {
+	export function getInputFiles(files: string | string[]): Promise<string[]> {
 		return new Promise((resolve) => {
 			if (Array.isArray(files)) {
-				Promise.all(files.map(file => getInputFiles(file))).then((matches) => {
-					const matched: string[] = [];
-					for (const match of matches) {
-						matched.push(...match);
+				Promise.all(files.map((file) => getInputFiles(file))).then(
+					(matches) => {
+						const matched: string[] = [];
+						for (const match of matches) {
+							matched.push(...match);
+						}
+						resolve(matched);
 					}
-					resolve(matched);
-				});
+				);
 				return;
 			}
-			new Glob(Util.getFilePath(files), {
-				absolute: true,
-				nodir: true
-			}, (err, matches) => {
-				if (err) {
-					Logging.error('Error reading input', err);
-					Logging.exit(2);
-				} else {
-					resolve(matches);
+			new Glob(
+				Util.getFilePath(files),
+				{
+					absolute: true,
+					nodir: true,
+				},
+				(err, matches) => {
+					if (err) {
+						Logging.error('Error reading input', err);
+						Logging.exit(2);
+					} else {
+						resolve(matches);
+					}
 				}
-			});
+			);
 		});
 	}
 
-	export async function readInputFiles(inputs: string[], skip: string[] = []): Promise<{
+	export async function readInputFiles(
+		inputs: string[],
+		skip: string[] = []
+	): Promise<{
 		[key: string]: string;
 	}> {
 		const fileMap: {
 			[key: string]: string;
-		} = { }
-		await Promise.all(inputs.map((input) => {
-			return new Promise<string>((resolve) => {
-				if (skip.indexOf(input) > -1) {
-					resolve('');
-				}
-				fs.readFile(input, 'utf8', (err, data) => {
-					if (err) {
-						Logging.error('Error reading input file(s)', err);
-						Logging.exit(2);
-					} else {
-						fileMap[input] = data;
-						resolve(data);
+		} = {};
+		await Promise.all(
+			inputs.map((input) => {
+				return new Promise<string>((resolve) => {
+					if (skip.indexOf(input) > -1) {
+						resolve('');
 					}
+					fs.readFile(input, 'utf8', (err, data) => {
+						if (err) {
+							Logging.error('Error reading input file(s)', err);
+							Logging.exit(2);
+						} else {
+							fileMap[input] = data;
+							resolve(data);
+						}
+					});
 				});
-			});
-		}));
+			})
+		);
 		return fileMap;
 	}
 }
 
 namespace Main {
 	namespace Constants {
-		export const getFileTemplate = (selectorMap: string, idMap: string, classMap: string, moduleMap: string, tagMap: string, doExport: boolean) => {
+		export const getFileTemplate = (
+			selectorMap: string,
+			idMap: string,
+			classMap: string,
+			moduleMap: string,
+			tagMap: string,
+			doExport: boolean
+		) => {
 			const prefix = doExport ? 'export ' : '';
 			return `${prefix}interface SelectorMap ${selectorMap}
 
@@ -274,7 +313,9 @@ ${prefix}interface Document {
 	getElementsByClassName<T extends keyof ClassMap>(classNames: string): HTMLCollectionOf<ClassMap[T]>
 	getElementsByTagName<T extends keyof TagMap>(tagName: T): NodeListOf<TagMap[T]>;
 }
-${doExport ? `
+${
+	doExport
+		? `
 export type ModuleIDs<T extends keyof ModuleMap> = ModuleMap[T];
 
 export type SelectorMapType = ${selectorMap}
@@ -285,8 +326,10 @@ export type ClassMapType = ${classMap}
 
 export type ModuleMapType = ${moduleMap}
 
-export type TagMapType = ${tagMap}` : ''}`;
-		}
+export type TagMapType = ${tagMap}`
+		: ''
+}`;
+		};
 
 		export function getTagType(name: string) {
 			switch (name) {
@@ -411,10 +454,13 @@ export type TagMapType = ${tagMap}` : ''}`;
 				case 'sub':
 				case 'u':
 					return 'HTMLElement';
-				default: 
-					return `HTML${name.split('-').map((word) => {
-						return word[0].toUpperCase() + word.slice(1);
-					}).join('')}Element`;
+				default:
+					return `HTML${name
+						.split('-')
+						.map((word) => {
+							return word[0].toUpperCase() + word.slice(1);
+						})
+						.join('')}Element`;
 			}
 		}
 	}
@@ -423,7 +469,7 @@ export type TagMapType = ${tagMap}` : ''}`;
 		function stringToType(str: string) {
 			return str.replace(/":( )?"((\w|#|\.|\|)+)"/g, '": $2');
 		}
-		
+
 		function prettyify(str: string) {
 			if (str === '{}') {
 				return '{}';
@@ -438,22 +484,214 @@ export type TagMapType = ${tagMap}` : ''}`;
 				.replace(/{"/g, '{\n"')
 				.replace(/:"{ }",/, ':{ },\n')
 				.replace(/,/g, ';')
-				.replace(/(\s+)\}/g, ';\n}')
+				.replace(/(\s+)\}/g, ';\n}');
 			const split = str.split('\n');
 			return split.join('\n');
 		}
 
 		export function formatTypings(typings: {
-			[key: string]: string|{
-				[key: string]: string;
-			};
+			[key: string]:
+				| string
+				| {
+						[key: string]: string;
+				  };
 		}) {
-			return prettyify(stringToType(JSON.stringify(typings, null, '\t')))
+			return prettyify(stringToType(JSON.stringify(typings, null, '\t')));
 		}
 	}
 
 	export namespace Conversion {
 		export namespace Extraction {
+			export namespace JSX {
+				interface AcornCallExpression extends acorn.Node {
+					type: 'CallExpression';
+					callee: AcornNode;
+					arguments: AcornNode[];
+				}
+
+				interface AcornIdentifier extends acorn.Node {
+					type: 'Identifier';
+					name: string;
+				}
+
+				interface AcornMemberExpression extends acorn.Node {
+					type: 'MemberExpression';
+					arguments?: Array<any>;
+					object: AcornNode;
+					property: AcornIdentifier;
+					computed: boolean;
+				}
+
+				interface AcornLiteral extends acorn.Node {
+					type: 'Literal';
+					value: string;
+					raw: string;
+				}
+
+				interface AcornObjectExpression extends acorn.Node {
+					type: 'ObjectExpressions';
+					properties: AcornNode[];
+				}
+
+				interface AcornProperty extends acorn.Node {
+					type: 'Property';
+					method: boolean;
+					shorthand: boolean;
+					computed: boolean;
+					key: AcornNode;
+					value: AcornNode;
+					kind: string;
+				}
+
+				type AcornNode =
+					| AcornCallExpression
+					| AcornIdentifier
+					| AcornMemberExpression
+					| AcornLiteral
+					| AcornObjectExpression
+					| AcornProperty;
+
+				function getMemberName(node: AcornMemberExpression): string {
+					if (node.computed) return '';
+					if (node.object.type === 'Identifier') {
+						return `${node.object.name}.${node.property.name}`;
+					}
+					if (node.object.type !== 'MemberExpression') {
+						return '';
+					}
+					return `${getMemberName(node.object)}.${
+						node.property.name
+					}`;
+				}
+
+				function getCallee(node: AcornCallExpression) {
+					if (node.callee.type === 'Identifier') {
+						return node.callee.name;
+					}
+					if (node.callee.type === 'MemberExpression') {
+						return getMemberName(node.callee);
+					}
+					return '';
+				}
+
+				function getTagName(node: AcornCallExpression) {
+					const arg = node.arguments[0];
+					if (arg.type === 'Literal') {
+						return arg.value;
+					}
+					if (
+						arg.type === 'Identifier' &&
+						/[A-Z]/.test(arg.name[0])
+					) {
+						return arg.name;
+					}
+					return null;
+				}
+
+				function getAttrs(
+					node: AcornCallExpression
+				): {
+					id: string | null;
+					className: string | null;
+					elementType: string|null;
+				} {
+					const result: {
+						id: string|null,
+						className: string|null
+						elementType: string|null,
+					} = {
+						id: null,
+						className: null,
+						elementType: null,
+					}
+
+					const arg = node.arguments[1];
+					if (arg.type !== 'ObjectExpressions')
+						return result;
+					for (const prop of arg.properties) {
+						if (prop.type !== 'Property') continue;
+						if (
+							prop.value.type !== 'Identifier' ||
+							prop.key.type !== 'Identifier'
+						)
+							continue;
+
+						if (prop.key.name === 'id') {
+							result.id = prop.value.name;
+						} else if (prop.key.name === 'class' || prop.key.name === 'className') {
+							result.className = prop.value.name;
+						} else if (prop.key.name === 'data-element-type') {
+							result.elementType = prop.value.name;
+						}
+					}
+
+					return result;
+				}
+
+				export function parseJSX(content: string, jsxFactory: string) {
+					const moduleNodeMap: Map<acorn.Node, string> = new Map();
+
+					const maps: {
+						[moduleName: string]: {
+							ids: {
+								[key: string]: string;
+							};
+							classes: [string, string][];
+						};
+					} = {
+						__default__: {
+							ids: {},
+							classes: [],
+						},
+					};
+					const defaultKey = '__default__';
+
+					const parsed = acorn.parse(content);
+					acornWalk.fullAncestor(
+						parsed,
+						(node, state, ancestors, type) => {
+							if (type === 'CallExpression') {
+								// Check if the callee is equal to jsxFactory
+								if (
+									getCallee(node as AcornCallExpression) !==
+									jsxFactory
+								) {
+									return;
+								}
+
+								// Get the tag name
+								const tagName = getTagName(
+									node as AcornCallExpression
+								);
+								if (!tagName) return;
+
+								const { className, id , elementType } = getAttrs(
+									node as AcornCallExpression
+								);
+
+								let mapKey: string = defaultKey;
+								for (const ancestor of [...ancestors].reverse()) {
+									if (moduleNodeMap.has(ancestor)) {
+										mapKey = moduleNodeMap.get(ancestor)!;
+										break;
+									}
+								}
+								if (tagName === 'dom-module' && id) {
+									maps[id] = {
+										ids: {},
+										classes: []
+									}
+									moduleNodeMap.set(node, id);
+								} else if (tagName === 'template' && id) {
+									// maps[mapKey].ids[`#${id}`] = 
+								}
+							}
+						}
+					);
+					return {};
+				}
+			}
+
 			export interface PartialTypingsObj {
 				ids: {
 					[key: string]: string;
@@ -469,15 +707,15 @@ export type TagMapType = ${tagMap}` : ''}`;
 			export function parseHTML(content: string) {
 				const handler = new ParserHandler();
 				const parser = new Parser(handler.genObj());
-		   
-			   parser.write(content);
-			   parser.end();
 
-			   return handler.done();
+				parser.write(content);
+				parser.end();
+
+				return handler.done();
 			}
-			
+
 			const included: {
-				[file: string]: PugParser.ParserBlock
+				[file: string]: PugParser.ParserBlock;
 			} = {};
 
 			export function fillInclude(includePath: string, filePath: string) {
@@ -486,32 +724,42 @@ export type TagMapType = ${tagMap}` : ''}`;
 				}
 
 				if (filePath === null) {
-					throw new Error('Pug base path not given, please pass it using the options.pugPath setting');
+					throw new Error(
+						'Pug base path not given, please pass it using the options.pugPath setting'
+					);
 				}
-				const includeFinalPath = path.isAbsolute(includePath) ?
-					includePath : path.join(path.dirname(filePath), 
-						includePath);
+				const includeFinalPath = path.isAbsolute(includePath)
+					? includePath
+					: path.join(path.dirname(filePath), includePath);
 				const includeFile = fs.readFileSync(includeFinalPath, {
-					encoding: 'utf8'
+					encoding: 'utf8',
 				});
 				const parsed = fillIncludes(parse(lex(includeFile)), filePath);
 				included[includePath] = JSON.parse(JSON.stringify(parsed));
 				return parsed;
 			}
 
-			export function traverseConditionalWithoutReplacement(token: PugParser.ParserConditional, 
-				callback: (node: PugParser.ParserNode) => PugParser.ParserNode) {
-					traverseBlocks(token.consequent, callback);
-					if (token.alternate) {
-						if (token.alternate.type === 'Block') {
-							traverseBlocks(token.alternate, callback);
-						} else {
-							traverseConditionalWithoutReplacement(token.alternate, callback);
-						}
+			export function traverseConditionalWithoutReplacement(
+				token: PugParser.ParserConditional,
+				callback: (node: PugParser.ParserNode) => PugParser.ParserNode
+			) {
+				traverseBlocks(token.consequent, callback);
+				if (token.alternate) {
+					if (token.alternate.type === 'Block') {
+						traverseBlocks(token.alternate, callback);
+					} else {
+						traverseConditionalWithoutReplacement(
+							token.alternate,
+							callback
+						);
 					}
 				}
+			}
 
-			export function traverseBlocks(tokens: PugParser.ParserBlock, callback: (node: PugParser.ParserNode) => PugParser.ParserNode) {
+			export function traverseBlocks(
+				tokens: PugParser.ParserBlock,
+				callback: (node: PugParser.ParserNode) => PugParser.ParserNode
+			) {
 				for (const index in tokens.nodes) {
 					const token = tokens.nodes[index];
 					if (token.type === 'Conditional') {
@@ -527,7 +775,10 @@ export type TagMapType = ${tagMap}` : ''}`;
 				}
 			}
 
-			export function fillIncludes(tokens: PugParser.ParserBlock, filePath: string) {
+			export function fillIncludes(
+				tokens: PugParser.ParserBlock,
+				filePath: string
+			) {
 				traverseBlocks(tokens, (node) => {
 					if (node.type === 'Include') {
 						return fillInclude(node.file.path, filePath);
@@ -541,7 +792,7 @@ export type TagMapType = ${tagMap}` : ''}`;
 				const definedMixins: {
 					[key: string]: PugParser.ParserBlock;
 				} = {};
-				
+
 				//First find them
 				traverseBlocks(tokens, (node) => {
 					if (node.type === 'Mixin' && node.call === false) {
@@ -550,15 +801,19 @@ export type TagMapType = ${tagMap}` : ''}`;
 							type: 'Block',
 							line: node.line,
 							filename: null,
-							nodes: []
-						}
+							nodes: [],
+						};
 					}
 					return node;
 				});
 
 				//Then replace them
 				traverseBlocks(tokens, (node) => {
-					if (node.type === 'Mixin' && node.call === true && node.name in definedMixins) {
+					if (
+						node.type === 'Mixin' &&
+						node.call === true &&
+						node.name in definedMixins
+					) {
 						return definedMixins[node.name];
 					}
 					return node;
@@ -571,17 +826,19 @@ export type TagMapType = ${tagMap}` : ''}`;
 				return fillMixins(fillIncludes(parse(lex(content)), filePath));
 			}
 
-			export function objectifyAttributes(attribs: {
-				name: string;
-				val: any;
-				mustEscape: boolean;
-			}[]): {
+			export function objectifyAttributes(
+				attribs: {
+					name: string;
+					val: any;
+					mustEscape: boolean;
+				}[]
+			): {
 				[key: string]: string;
 			} {
 				const obj: {
 					[key: string]: string;
 				} = {};
-				for (let {name, val, mustEscape} of attribs) {
+				for (let { name, val, mustEscape } of attribs) {
 					if (!mustEscape) {
 						obj[name] = stripQuotes(val);
 					}
@@ -589,12 +846,18 @@ export type TagMapType = ${tagMap}` : ''}`;
 				return obj;
 			}
 
-			export function traverseConditional(node: PugParser.ParserConditional, fns: {
-				onopentag(name: string, attribs: {
-					[key: string]: string;
-				}): void;
-				onclosetag(name: string): void;
-			}) {
+			export function traverseConditional(
+				node: PugParser.ParserConditional,
+				fns: {
+					onopentag(
+						name: string,
+						attribs: {
+							[key: string]: string;
+						}
+					): void;
+					onclosetag(name: string): void;
+				}
+			) {
 				traversePug(node.consequent, fns);
 				if (node.alternate) {
 					if (node.alternate.type === 'Block') {
@@ -605,12 +868,18 @@ export type TagMapType = ${tagMap}` : ''}`;
 				}
 			}
 
-			export function traversePug(content: PugParser.ParserBlock, fns: {
-				onopentag(name: string, attribs: {
-					[key: string]: string;
-				}): void;
-				onclosetag(name: string): void;
-			}) {
+			export function traversePug(
+				content: PugParser.ParserBlock,
+				fns: {
+					onopentag(
+						name: string,
+						attribs: {
+							[key: string]: string;
+						}
+					): void;
+					onclosetag(name: string): void;
+				}
+			) {
 				if (!content || !content.nodes) {
 					return;
 				}
@@ -618,7 +887,10 @@ export type TagMapType = ${tagMap}` : ''}`;
 					if (node.type === 'Block') {
 						traversePug(node, fns);
 					} else if (node.type === 'Tag') {
-						fns.onopentag(node.name, objectifyAttributes(node.attrs));
+						fns.onopentag(
+							node.name,
+							objectifyAttributes(node.attrs)
+						);
 						traversePug(node.block, fns);
 						fns.onclosetag(node.name);
 					} else if (node.type === 'Conditional') {
@@ -630,8 +902,7 @@ export type TagMapType = ${tagMap}` : ''}`;
 			}
 
 			export function stripQuotes(word: any) {
-				return typeof word === 'string' ? 
-					word.slice(1, -1) : word;
+				return typeof word === 'string' ? word.slice(1, -1) : word;
 			}
 
 			export class ParserHandler {
@@ -639,44 +910,52 @@ export type TagMapType = ${tagMap}` : ''}`;
 					[moduleName: string]: {
 						ids: {
 							[key: string]: string;
-						}
-						classes: [string, string][]
-					}
+						};
+						classes: [string, string][];
+					};
 				} = {
 					__default__: {
 						ids: {},
-						classes: []
-					}
-				}
+						classes: [],
+					},
+				};
 				public mapKey: string = '__default__';
 
-				constructor() { }
+				constructor() {}
 
-				public onOpen(name: string, attribs: {
-					[key: string]: string;
-				}) {
+				public onOpen(
+					name: string,
+					attribs: {
+						[key: string]: string;
+					}
+				) {
 					if (name === 'dom-module') {
 						this.mapKey = attribs.id;
 						this.maps[this.mapKey] = {
 							ids: {},
-							classes: []
-						}
+							classes: [],
+						};
 						return;
 					} else if (name === 'template') {
 						if (attribs.id) {
-							this.maps[this.mapKey].ids[`#${attribs.id}`] = attribs['data-element-type'] ||
+							this.maps[this.mapKey].ids[`#${attribs.id}`] =
+								attribs['data-element-type'] ||
 								Constants.getTagType(attribs.is);
 						}
 					} else {
 						if (attribs.id) {
-							this.maps[this.mapKey].ids[`#${attribs.id}`] = attribs['data-element-type'] ||
+							this.maps[this.mapKey].ids[`#${attribs.id}`] =
+								attribs['data-element-type'] ||
 								Constants.getTagType(name);
 						}
 					}
 					if (attribs.class) {
 						for (const className of attribs.class.split(' ')) {
-							this.maps[this.mapKey].classes.push([className, attribs['data-element-type'] || 
-								Constants.getTagType(name)]);
+							this.maps[this.mapKey].classes.push([
+								className,
+								attribs['data-element-type'] ||
+									Constants.getTagType(name),
+							]);
 						}
 					}
 				}
@@ -690,8 +969,8 @@ export type TagMapType = ${tagMap}` : ''}`;
 				genObj() {
 					return {
 						onopentag: this.onOpen.bind(this),
-						onclosetag: this.onClose.bind(this)
-					}
+						onclosetag: this.onClose.bind(this),
+					};
 				}
 
 				done() {
@@ -699,67 +978,125 @@ export type TagMapType = ${tagMap}` : ''}`;
 				}
 			}
 
-			export function parsePug(content: string, filePath: string): ModuleMappingPartialTypingsObj {
+			export function parsePug(
+				content: string,
+				filePath: string
+			): ModuleMappingPartialTypingsObj {
 				const handler = new ParserHandler();
 				traversePug(lexPug(content, filePath), handler.genObj());
 				return handler.done();
 			}
 
-			export function getTypings(file: string, filePath: string, fileType: FILE_TYPE): ModuleMappingPartialTypingsObj {
+			export function parseJSX(
+				content: string,
+				jsxFactory: string
+			): ModuleMappingPartialTypingsObj {
+				return JSX.parseJSX(content, jsxFactory);
+			}
+
+			export function getTypings(
+				file: string,
+				filePath: string,
+				fileType: FILE_TYPE,
+				jsxFactory?: string
+			): ModuleMappingPartialTypingsObj {
 				switch (fileType) {
 					case FILE_TYPE.PUG:
 					case FILE_TYPE.JADE:
 						return parsePug(file, filePath);
+					case FILE_TYPE.COMPILED_JSX:
+						return parseJSX(file, jsxFactory!);
 					case FILE_TYPE.HTML:
 					default:
 						return parseHTML(file);
 				}
 			}
-			
-			export async function writeToOutput(typings: TypingsObj, outPath: string = Input.args.output) {
+
+			export async function writeToOutput(
+				typings: TypingsObj,
+				outPath: string = Input.args.output
+			) {
 				return new Promise((resolve, reject) => {
-					fs.writeFile(Util.getFilePath(outPath), Joining.convertToDefsFile(typings), (err) => {
-						if (err) {
-							Logging.error('Error writing to file');
-							reject(err);
-						} else {
-							if (!Input.args.watch) {
-								Logging.log('Output typings to', Util.getFilePath(outPath));
+					fs.writeFile(
+						Util.getFilePath(outPath),
+						Joining.convertToDefsFile(typings),
+						(err) => {
+							if (err) {
+								Logging.error('Error writing to file');
+								reject(err);
+							} else {
+								if (!Input.args.watch) {
+									Logging.log(
+										'Output typings to',
+										Util.getFilePath(outPath)
+									);
+								}
+								resolve();
 							}
-							resolve();
 						}
-					});
+					);
 				});
 			}
 
 			export async function extractTypes(files?: string[]) {
-				const inFiles = files || await Files.getInputFiles(Input.args.input);
-				if (inFiles.length !== 1 && !Input.args.output && Input.args.output !== '') {
-					Logging.error('Argument "-o\/--output" is required when not using -s option and passing multiple files');
+				const inFiles =
+					files || (await Files.getInputFiles(Input.args.input));
+				if (
+					inFiles.length !== 1 &&
+					!Input.args.output &&
+					Input.args.output !== ''
+				) {
+					Logging.error(
+						'Argument "-o/--output" is required when not using -s option and passing multiple files'
+					);
 					Logging.exit(1);
 				}
-				const typings = await getTypingsForInput(Input.args.input, inFiles);
+				const typings = await getTypingsForInput(
+					Input.args.input,
+					inFiles
+				);
 				return typings;
 			}
 
 			export async function extractTypesAndWrite(files?: string[]) {
 				const typings = await extractTypes(files);
-				return writeToOutput(typings, Input.args.output || Util.toQuerymapPath(files[0]));
+				return writeToOutput(
+					typings,
+					Input.args.output || Util.toQuerymapPath(files[0])
+				);
 			}
 
-			export async function getSplitTypings(input: string|string[], files?: string[], splitTypings: {
-				[key: string]: ModuleMappingPartialTypingsObj;
-			} = {}) {
-				files = files || await Files.getInputFiles(input)
+			export async function getSplitTypings(
+				input: string | string[],
+				files?: string[],
+				splitTypings: {
+					[key: string]: ModuleMappingPartialTypingsObj;
+				} = {}
+			) {
+				files = files || (await Files.getInputFiles(input));
 				files = files.sort();
 				const toSkip = Object.getOwnPropertyNames(splitTypings);
 				const contentsMap = await Files.readInputFiles(files, toSkip);
-				return Util.objectForEach<string, ModuleMappingPartialTypingsObj>(contentsMap, (fileContent, fileName: string) => {
-					return getTypings(fileContent, fileName, Util.getFileType(fileName));
-				}, splitTypings);
+				return Util.objectForEach<
+					string,
+					ModuleMappingPartialTypingsObj
+				>(
+					contentsMap,
+					(fileContent, fileName: string) => {
+						return getTypings(
+							fileContent,
+							fileName,
+							Util.getFileType(fileName)
+						);
+					},
+					splitTypings
+				);
 			}
-			
-			export async function getTypingsForInput(input: string|string[], files?: string[]) {
+
+			export async function getTypingsForInput(
+				input: string | string[],
+				files?: string[]
+			) {
 				const typingMaps = await getSplitTypings(input, files);
 				return Joining.mergeTypes(typingMaps);
 			}
@@ -771,61 +1108,79 @@ export type TagMapType = ${tagMap}` : ''}`;
 					[moduleName: string]: {
 						ids: {
 							[key: string]: string;
-						}
-						classes: [string, string][]
+						};
+						classes: [string, string][];
 						module?: string;
-					}
-				}
+					};
+				};
 			}) {
 				let selectorMap: {
 					[fileName: string]: {
-						[key: string]: string
-					}
+						[key: string]: string;
+					};
 				} = {};
-			
+
 				const moduleMap: {
 					[fileName: string]: {
 						[moduleName: string]: {
 							[key: string]: string;
-						}
-					}
+						};
+					};
 				} = {};
-			
+
 				let idMap: {
 					[fileName: string]: {
-						[key: string]: string
-					}
+						[key: string]: string;
+					};
 				} = {};
-			
+
 				const allClassTypes: {
 					[fileName: string]: {
-						[key: string]: string[]
-					}
+						[key: string]: string[];
+					};
 				} = {};
 
 				const tagNameMap: {
 					[fileName: string]: {
 						[key: string]: string;
-					}
+					};
 				} = {};
-			
+
 				for (let fileName in types) {
 					for (let moduleName in types[fileName]) {
 						const typeMap = types[fileName][moduleName];
 						if (moduleName !== '__default__') {
-							moduleMap[fileName][moduleName] = Util.removeKeysFirstChar(typeMap.ids);
-							tagNameMap[fileName][moduleName] = Constants.getTagType(moduleName);
-							selectorMap[fileName][moduleName] = tagNameMap[fileName][moduleName];
+							moduleMap[fileName][
+								moduleName
+							] = Util.removeKeysFirstChar(typeMap.ids);
+							tagNameMap[fileName][
+								moduleName
+							] = Constants.getTagType(moduleName);
+							selectorMap[fileName][moduleName] =
+								tagNameMap[fileName][moduleName];
 						}
-						idMap[fileName] = { ...idMap[fileName], ...Util.removeKeysFirstChar(typeMap.ids) }
-						selectorMap[fileName] = { ...selectorMap[fileName], ...typeMap.ids }
-				
+						idMap[fileName] = {
+							...idMap[fileName],
+							...Util.removeKeysFirstChar(typeMap.ids),
+						};
+						selectorMap[fileName] = {
+							...selectorMap[fileName],
+							...typeMap.ids,
+						};
+
 						typeMap.classes.forEach((typeMapClass) => {
 							const [className, tagName] = typeMapClass;
-							allClassTypes[fileName] = allClassTypes[fileName] || {};
+							allClassTypes[fileName] =
+								allClassTypes[fileName] || {};
 							if (className in allClassTypes[fileName]) {
-								if (allClassTypes[fileName][className].indexOf(tagName) === -1) {
-									allClassTypes[fileName][className].push(tagName);
+								if (
+									allClassTypes[fileName][className].indexOf(
+										tagName
+									) === -1
+								) {
+									allClassTypes[fileName][className].push(
+										tagName
+									);
 								}
 							} else {
 								allClassTypes[fileName][className] = [tagName];
@@ -833,39 +1188,63 @@ export type TagMapType = ${tagMap}` : ''}`;
 						});
 					}
 				}
-			
+
 				const joinedClassNames: {
 					[fileName: string]: {
 						[key: string]: string;
-					}
+					};
 				} = {};
-			
-				Object.getOwnPropertyNames(allClassTypes).forEach((fileName: string) => {
-					selectorMap[fileName] = selectorMap[fileName] || {};
-					joinedClassNames[fileName] = joinedClassNames[fileName] || {};
-					Object.getOwnPropertyNames(allClassTypes[fileName]).forEach((className: string) => {
-						selectorMap[fileName][`.${className}`] = allClassTypes[fileName][className].sort().join('|');
-						joinedClassNames[fileName][className] = allClassTypes[fileName][className].sort().join('|');
-					});
-				});
-			
+
+				Object.getOwnPropertyNames(allClassTypes).forEach(
+					(fileName: string) => {
+						selectorMap[fileName] = selectorMap[fileName] || {};
+						joinedClassNames[fileName] =
+							joinedClassNames[fileName] || {};
+						Object.getOwnPropertyNames(
+							allClassTypes[fileName]
+						).forEach((className: string) => {
+							selectorMap[fileName][
+								`.${className}`
+							] = allClassTypes[fileName][className]
+								.sort()
+								.join('|');
+							joinedClassNames[fileName][
+								className
+							] = allClassTypes[fileName][className]
+								.sort()
+								.join('|');
+						});
+					}
+				);
+
 				const fileNames = [
 					...Object.keys(selectorMap),
 					...Object.keys(moduleMap),
 					...Object.keys(idMap),
 					...Object.keys(joinedClassNames),
-					...Object.keys(tagNameMap)
+					...Object.keys(tagNameMap),
 				].filter((v, i, a) => a.indexOf(v) === i);
 
-				return Util.arrToObj(fileNames.map((fileName) => {
-					return [fileName, {
-						selectors: Util.sortObj(selectorMap[fileName] || {}),
-						modules: Util.sortObj(moduleMap[fileName] || {}),
-						ids: Util.sortObj(idMap[fileName] || {}),
-						classes: Util.sortObj(joinedClassNames[fileName] || {}),
-						tags: Util.sortObj(tagNameMap[fileName] || {})
-					}];
-				}));
+				return Util.arrToObj(
+					fileNames.map((fileName) => {
+						return [
+							fileName,
+							{
+								selectors: Util.sortObj(
+									selectorMap[fileName] || {}
+								),
+								modules: Util.sortObj(
+									moduleMap[fileName] || {}
+								),
+								ids: Util.sortObj(idMap[fileName] || {}),
+								classes: Util.sortObj(
+									joinedClassNames[fileName] || {}
+								),
+								tags: Util.sortObj(tagNameMap[fileName] || {}),
+							},
+						];
+					})
+				);
 			}
 
 			export function mergeTypes(types: {
@@ -873,49 +1252,60 @@ export type TagMapType = ${tagMap}` : ''}`;
 					[moduleName: string]: {
 						ids: {
 							[key: string]: string;
-						}
-						classes: [string, string][]
+						};
+						classes: [string, string][];
 						module?: string;
-					}
-				}
+					};
+				};
 			}) {
 				let selectorMap: {
-					[key: string]: string
+					[key: string]: string;
 				} = {};
-			
+
 				const moduleMap: {
 					[moduleName: string]: {
 						[key: string]: string;
-					}
+					};
 				} = {};
-			
+
 				let idMap: {
-					[key: string]: string
+					[key: string]: string;
 				} = {};
-			
+
 				const allClassTypes: {
-					[key: string]: string[]
+					[key: string]: string[];
 				} = {};
 
 				const tagNameMap: {
 					[key: string]: string;
 				} = {};
-			
+
 				for (let fileName in types) {
 					for (let moduleName in types[fileName]) {
 						const typeMap = types[fileName][moduleName];
 						if (moduleName !== '__default__') {
-							moduleMap[moduleName] = Util.removeKeysFirstChar(typeMap.ids);
-							tagNameMap[moduleName] = Constants.getTagType(moduleName);
+							moduleMap[moduleName] = Util.removeKeysFirstChar(
+								typeMap.ids
+							);
+							tagNameMap[moduleName] = Constants.getTagType(
+								moduleName
+							);
 							selectorMap[moduleName] = tagNameMap[moduleName];
 						}
-						idMap = { ...idMap, ...Util.removeKeysFirstChar(typeMap.ids) }
-						selectorMap = { ...selectorMap, ...typeMap.ids }
-				
+						idMap = {
+							...idMap,
+							...Util.removeKeysFirstChar(typeMap.ids),
+						};
+						selectorMap = { ...selectorMap, ...typeMap.ids };
+
 						typeMap.classes.forEach((typeMapClass) => {
 							const [className, tagName] = typeMapClass;
 							if (className in allClassTypes) {
-								if (allClassTypes[className].indexOf(tagName) === -1) {
+								if (
+									allClassTypes[className].indexOf(
+										tagName
+									) === -1
+								) {
 									allClassTypes[className].push(tagName);
 								}
 							} else {
@@ -924,37 +1314,53 @@ export type TagMapType = ${tagMap}` : ''}`;
 						});
 					}
 				}
-			
+
 				const joinedClassNames: {
 					[key: string]: string;
 				} = {};
-			
-				Object.getOwnPropertyNames(allClassTypes).forEach((className: string) => {
-					selectorMap[`.${className}`] = allClassTypes[className].sort().join('|');
-					joinedClassNames[className] = allClassTypes[className].sort().join('|');
-				});
-			
+
+				Object.getOwnPropertyNames(allClassTypes).forEach(
+					(className: string) => {
+						selectorMap[`.${className}`] = allClassTypes[className]
+							.sort()
+							.join('|');
+						joinedClassNames[className] = allClassTypes[className]
+							.sort()
+							.join('|');
+					}
+				);
+
 				return {
 					selectors: Util.sortObj(selectorMap),
 					modules: Util.sortObj(moduleMap),
 					ids: Util.sortObj(idMap),
 					classes: Util.sortObj(joinedClassNames),
-					tags: Util.sortObj(tagNameMap)
-				}
+					tags: Util.sortObj(tagNameMap),
+				};
 			}
 
-			export function convertToDefsFile(typings: TypingsObj, exportTypes: boolean = false) {
+			export function convertToDefsFile(
+				typings: TypingsObj,
+				exportTypes: boolean = false
+			) {
 				const { classes, ids, modules, selectors, tags } = typings;
-				return Constants.getFileTemplate(Prettifying.formatTypings(selectors), 
-					Prettifying.formatTypings(ids), Prettifying.formatTypings(classes), 
-					Prettifying.formatTypings(modules), Prettifying.formatTypings(tags),
-					(Input.args &&  Input.args.export) || exportTypes);
+				return Constants.getFileTemplate(
+					Prettifying.formatTypings(selectors),
+					Prettifying.formatTypings(ids),
+					Prettifying.formatTypings(classes),
+					Prettifying.formatTypings(modules),
+					Prettifying.formatTypings(tags),
+					(Input.args && Input.args.export) || exportTypes
+				);
 			}
 		}
 	}
 }
 
-function watchFiles(input: string, callback: (changedFile: string, files: string[]) => void) {
+function watchFiles(
+	input: string,
+	callback: (changedFile: string, files: string[]) => void
+) {
 	const gaze = new Gaze(input, {}, (err, watcher) => {
 		if (err) {
 			Logging.error(err);
@@ -975,10 +1381,19 @@ function watchFiles(input: string, callback: (changedFile: string, files: string
 	return gaze;
 }
 
-async function doWatchCompilation(files: string[], previousTypings: {
-	[key: string]: Main.Conversion.Extraction.ModuleMappingPartialTypingsObj;
-}) {
-	const splitTypings = await Main.Conversion.Extraction.getSplitTypings('', files, previousTypings);
+async function doWatchCompilation(
+	files: string[],
+	previousTypings: {
+		[
+			key: string
+		]: Main.Conversion.Extraction.ModuleMappingPartialTypingsObj;
+	}
+) {
+	const splitTypings = await Main.Conversion.Extraction.getSplitTypings(
+		'',
+		files,
+		previousTypings
+	);
 	const joinedTypes = Main.Conversion.Joining.mergeTypes(splitTypings);
 	Main.Conversion.Extraction.writeToOutput(joinedTypes).catch(() => {
 		Logging.exit(1);
@@ -987,9 +1402,14 @@ async function doWatchCompilation(files: string[], previousTypings: {
 }
 
 async function doSplitWatchCompilationAll(files: string[]) {
-	const splitTypings = Main.Conversion.Joining.mergeModules(await Main.Conversion.Extraction.getSplitTypings('', files));
+	const splitTypings = Main.Conversion.Joining.mergeModules(
+		await Main.Conversion.Extraction.getSplitTypings('', files)
+	);
 	for (const keyPath in splitTypings) {
-		Main.Conversion.Extraction.writeToOutput(splitTypings[keyPath], Util.toQuerymapPath(keyPath)).catch(() => {
+		Main.Conversion.Extraction.writeToOutput(
+			splitTypings[keyPath],
+			Util.toQuerymapPath(keyPath)
+		).catch(() => {
 			Logging.exit(1);
 		});
 	}
@@ -997,8 +1417,14 @@ async function doSplitWatchCompilationAll(files: string[]) {
 }
 
 async function doSingleFileWatchCompilation(file: string) {
-	const splitTypings = await Main.Conversion.Extraction.getTypingsForInput('', [file]);
-	Main.Conversion.Extraction.writeToOutput(splitTypings, Util.toQuerymapPath(file)).catch(() => {
+	const splitTypings = await Main.Conversion.Extraction.getTypingsForInput(
+		'',
+		[file]
+	);
+	Main.Conversion.Extraction.writeToOutput(
+		splitTypings,
+		Util.toQuerymapPath(file)
+	).catch(() => {
 		Logging.exit(1);
 	});
 	return splitTypings;
@@ -1009,7 +1435,7 @@ function getWatched(watcher: Gaze): string[] {
 	const keys = Object.getOwnPropertyNames(watched);
 	let files: string[] = [];
 	for (let i = 0; i < keys.length; i++) {
-		files = [...files, ...watched[keys[i]]]
+		files = [...files, ...watched[keys[i]]];
 	}
 	return files.filter((file) => {
 		return file && Util.isHtmlFile(file);
@@ -1023,58 +1449,82 @@ function main() {
 		close = () => {
 			watcher && watcher.close();
 			Logging.exit(0);
-		}
+		};
 		if (Input.args.watch) {
-			if (!Input.args.separate && !Input.args.output && Input.args.output !== '') {
-				Logging.error('Argument "-o\/--output" is required when not using -s option and using watch mode');
+			if (
+				!Input.args.separate &&
+				!Input.args.output &&
+				Input.args.output !== ''
+			) {
+				Logging.error(
+					'Argument "-o/--output" is required when not using -s option and using watch mode'
+				);
 				Logging.exit(1);
 				return;
 			}
 
 			let splitTypings: {
-				[key: string]: Main.Conversion.Extraction.ModuleMappingPartialTypingsObj;
+				[
+					key: string
+				]: Main.Conversion.Extraction.ModuleMappingPartialTypingsObj;
 			} = null;
 			let input = Input.args.input;
-			if (Util.endsWith(Input.args.input, '/') || 
-				Util.endsWith(Input.args.input, '\\')) {
-					input = input + '**/*.*';
-				} else if (Input.args.input.split(/\\\//).slice(-1)[0].indexOf('.') === -1) {
-					input = input + '/**/*.*';
-				}
+			if (
+				Util.endsWith(Input.args.input, '/') ||
+				Util.endsWith(Input.args.input, '\\')
+			) {
+				input = input + '**/*.*';
+			} else if (
+				Input.args.input.split(/\\\//).slice(-1)[0].indexOf('.') === -1
+			) {
+				input = input + '/**/*.*';
+			}
 			watcher = watchFiles(input, async (changedFile, files) => {
-				Logging.log('File(s) changed, re-generating typings for new file(s)');
+				Logging.log(
+					'File(s) changed, re-generating typings for new file(s)'
+				);
 				if (splitTypings && changedFile in splitTypings) {
 					delete splitTypings[changedFile];
 				}
 				if (Input.args.separate) {
 					await doSingleFileWatchCompilation(changedFile);
 				} else {
-					splitTypings = await doWatchCompilation(files, splitTypings);
+					splitTypings = await doWatchCompilation(
+						files,
+						splitTypings
+					);
 				}
-			});	
+			});
 			if (Input.args.separate) {
 				await doSplitWatchCompilationAll(getWatched(watcher));
 			} else {
-				splitTypings = await doWatchCompilation(getWatched(watcher), {})
+				splitTypings = await doWatchCompilation(
+					getWatched(watcher),
+					{}
+				);
 			}
 		} else {
 			(async () => {
 				if (Input.args.separate) {
-					return doSplitWatchCompilationAll(await Files.getInputFiles(Input.args.input));
+					return doSplitWatchCompilationAll(
+						await Files.getInputFiles(Input.args.input)
+					);
 				} else {
 					return Main.Conversion.Extraction.extractTypesAndWrite();
 				}
-			})().then(() => {
-				Logging.exit(0);
-			}).catch(() => {
-				Logging.exit(1);
-			});
+			})()
+				.then(() => {
+					Logging.exit(0);
+				})
+				.catch(() => {
+					Logging.exit(1);
+				});
 		}
 	})();
 
 	return () => {
 		close();
-	}
+	};
 }
 
 interface TypingsObj {
@@ -1094,83 +1544,144 @@ interface TypingsObj {
 	};
 	tags: {
 		[key: string]: string;
-	}
+	};
 }
 
 export const enum FILE_TYPE {
-	HTML = "html",
-	JADE = "pug",
-	PUG = "pug"
+	HTML = 'html',
+	JADE = 'pug',
+	PUG = 'pug',
+	COMPILED_JSX = 'jsx',
 }
 
 export function extractStringTypes(fileContents: string): string;
-export function extractStringTypes(fileContents: string, options: {
-	fileType?: FILE_TYPE;
-	getTypesObj?: null|false;
-	pugPath?: string;
-}): string;
-export function extractStringTypes(fileContents: string, options: {
-	fileType?: FILE_TYPE;
-	getTypesObj?: true;
-	pugPath?: string;
-}): TypingsObj;
-export function extractStringTypes(fileContents: string, options: {
-	fileType?: FILE_TYPE;
-	getTypesObj?: boolean|null;
-	pugPath?: string;
-	exportTypes?: boolean;
-} = {
-	fileType: FILE_TYPE.HTML,
-	getTypesObj: false,
-	pugPath: null,
-	exportTypes: false
-}): string|TypingsObj {
-	const { fileType, getTypesObj, pugPath , exportTypes} = options;
+export function extractStringTypes(
+	fileContents: string,
+	options: {
+		fileType?: FILE_TYPE.COMPILED_JSX;
+		getTypesObj?: null | false;
+		pugPath?: string;
+		jsxFactory: string;
+	}
+): string;
+export function extractStringTypes(
+	fileContents: string,
+	options: {
+		fileType?: FILE_TYPE.COMPILED_JSX;
+		getTypesObj?: true;
+		pugPath?: string;
+		jsxFactory: string;
+	}
+): TypingsObj;
+export function extractStringTypes(
+	fileContents: string,
+	options: {
+		fileType?: FILE_TYPE;
+		getTypesObj?: boolean | null;
+		pugPath?: string;
+		exportTypes?: boolean;
+		jsxFactory?: string;
+	} = {
+		fileType: FILE_TYPE.HTML,
+		getTypesObj: false,
+		pugPath: null,
+		exportTypes: false,
+	}
+): string | TypingsObj {
+	const { fileType, getTypesObj, pugPath, exportTypes, jsxFactory } = options;
+
+	if (fileType === FILE_TYPE.COMPILED_JSX && !jsxFactory) {
+		throw new Error(
+			'JSX factory needs to be defined when parsing compiled JSX'
+		);
+	}
 
 	const typings = Main.Conversion.Joining.mergeTypes({
-		'string': Main.Conversion.Extraction.getTypings(fileContents, 
-			pugPath, fileType)
+		string: Main.Conversion.Extraction.getTypings(
+			fileContents,
+			pugPath,
+			fileType,
+			jsxFactory
+		),
 	});
-	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
+	return getTypesObj
+		? typings
+		: Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
 }
 
 export async function extractGlobTypes(glob: string): Promise<string>;
-export async function extractGlobTypes(glob: string, { exportTypes = false, getTypesObj = false }: {
-	getTypesObj?: boolean|null;
-	exportTypes?: boolean;
-} = {}): Promise<string|TypingsObj> {
+export async function extractGlobTypes(
+	glob: string,
+	{
+		exportTypes = false,
+		getTypesObj = false,
+	}: {
+		getTypesObj?: boolean | null;
+		exportTypes?: boolean;
+	} = {}
+): Promise<string | TypingsObj> {
 	const typings = await Main.Conversion.Extraction.getTypingsForInput(glob);
-	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
+	return getTypesObj
+		? typings
+		: Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
 }
 
-export async function extractFileTypes(files: string|string[]): Promise<string>;
-export async function extractFileTypes(files: string|string[], { exportTypes = false, getTypesObj = false }: {
-	getTypesObj?: boolean|null;
-	exportTypes?: boolean;
-} = {}): Promise<string|TypingsObj> {
+export async function extractFileTypes(
+	files: string | string[]
+): Promise<string>;
+export async function extractFileTypes(
+	files: string | string[],
+	{
+		exportTypes = false,
+		getTypesObj = false,
+	}: {
+		getTypesObj?: boolean | null;
+		exportTypes?: boolean;
+	} = {}
+): Promise<string | TypingsObj> {
 	const typings = await Main.Conversion.Extraction.getTypingsForInput(files);
-	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
+	return getTypesObj
+		? typings
+		: Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
 }
 
 export async function extractFolderTypes(folder: string): Promise<string>;
-export async function extractFolderTypes(folder: string, { exportTypes = false, getTypesObj = false }: {
-	getTypesObj?: boolean|null;
-	exportTypes?: boolean;
-} = {}): Promise<string|TypingsObj> {
+export async function extractFolderTypes(
+	folder: string,
+	{
+		exportTypes = false,
+		getTypesObj = false,
+	}: {
+		getTypesObj?: boolean | null;
+		exportTypes?: boolean;
+	} = {}
+): Promise<string | TypingsObj> {
 	folder = Util.endsWith(folder, '/') ? folder : `${folder}/`;
-	const typings = await Main.Conversion.Extraction.getTypingsForInput(EXTENSIONS.map((extension) => {
-		return `${folder}**/*.${extension}`;
-	}));
-	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
+	const typings = await Main.Conversion.Extraction.getTypingsForInput(
+		EXTENSIONS.map((extension) => {
+			return `${folder}**/*.${extension}`;
+		})
+	);
+	return getTypesObj
+		? typings
+		: Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
 }
 
-function addToHandlers<T extends {
-	[key: string]: P[]
-}, P extends Function>(handlers: T, prevOutput: {
-	exit: number|null;
-	error: string[][];
-	log: string[][];
-}, event: 'exit'|'error'|'log', handler: P) {
+function addToHandlers<
+	T extends {
+		[key: string]: P[];
+	},
+	P extends Function
+>(
+	handlers: T,
+	prevOutput: {
+		exit: number | null;
+		error: string[][];
+		log: string[][];
+	},
+	event: 'exit' | 'error' | 'log',
+	handler: P
+) {
 	if (event === 'exit' || event === 'error' || event === 'log') {
 		if (event === 'exit') {
 			handlers[event].push(handler);
@@ -1186,7 +1697,9 @@ function addToHandlers<T extends {
 	}
 }
 
-export function cli(args: string[]): {
+export function cli(
+	args: string[]
+): {
 	on(event: 'exit', handler: (exitCode: number) => void): void;
 	on(event: 'error', handler: (...args: any[]) => void): void;
 	on(event: 'log', handler: (...args: any[]) => void): void;
@@ -1203,16 +1716,16 @@ export function cli(args: string[]): {
 	} = {
 		exit: [],
 		error: [],
-		log: []
+		log: [],
 	};
 	const output: {
-		exit: number|null;
+		exit: number | null;
 		error: string[][];
 		log: string[][];
 	} = {
 		exit: null,
 		error: [],
-		log: []
+		log: [],
 	};
 	Logging.handle({
 		exit(code) {
@@ -1232,15 +1745,18 @@ export function cli(args: string[]): {
 			handlers.log.forEach((handler) => {
 				handler(...args);
 			});
-		}
+		},
 	});
 	Input.parse(args);
 	const close = main();
 	return {
-		on(event: 'exit'|'error'|'log', handler: (...args: any[]) => void) {
+		on(event: 'exit' | 'error' | 'log', handler: (...args: any[]) => void) {
 			addToHandlers(handlers, output, event, handler);
 		},
-		addEventListener(event: 'exit'|'error'|'log', handler: (...args: any[]) => void) {
+		addEventListener(
+			event: 'exit' | 'error' | 'log',
+			handler: (...args: any[]) => void
+		) {
 			addToHandlers(handlers, output, event, handler);
 		},
 		quit() {
@@ -1248,8 +1764,8 @@ export function cli(args: string[]): {
 		},
 		get hasQuit() {
 			return output.exit !== null;
-		}
-	}
+		},
+	};
 }
 
 type HTMLTypingsWindow = typeof window & {
@@ -1259,8 +1775,8 @@ type HTMLTypingsWindow = typeof window & {
 		extractFileTypes: typeof extractFileTypes;
 		extractFolderTypes: typeof extractFolderTypes;
 		cli: typeof cli;
-	}
-}
+	};
+};
 
 if (require.main === module) {
 	//Called via command-line
@@ -1272,6 +1788,6 @@ if (require.main === module) {
 		extractFileTypes: extractFileTypes,
 		extractFolderTypes: extractFolderTypes,
 		extractGlobTypes: extractGlobTypes,
-		extractStringTypes: extractStringTypes
-	}
+		extractStringTypes: extractStringTypes,
+	};
 }
