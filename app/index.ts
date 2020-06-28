@@ -119,20 +119,14 @@ namespace Util {
 			Util.endsWith(file, '.pug');
 	}
 
-	export enum FileTypes {
-		HTML,
-		PUG,
-		UNKNOWN
-	}
-
-	export function getFileType(name: string) {
+	export function getFileType(name: string): FILE_TYPE {
 		if (endsWith(name, '.html')) {
-			return FileTypes.HTML;
+			return FILE_TYPE.HTML;
 		}
 		if (endsWith(name, '.pug') || endsWith(name, '.jade')) {
-			return FileTypes.PUG;
+			return FILE_TYPE.PUG;
 		}
-		return FileTypes.UNKNOWN;
+		return FILE_TYPE.HTML;
 	}
 
 	export function objectForEach<U, P, O extends {
@@ -711,11 +705,12 @@ export type TagMapType = ${tagMap}` : ''}`;
 				return handler.done();
 			}
 
-			export function getTypings(file: string, filePath: string, fileType: Util.FileTypes): ModuleMappingPartialTypingsObj {
+			export function getTypings(file: string, filePath: string, fileType: FILE_TYPE): ModuleMappingPartialTypingsObj {
 				switch (fileType) {
-					case Util.FileTypes.PUG:
+					case FILE_TYPE.PUG:
+					case FILE_TYPE.JADE:
 						return parsePug(file, filePath);
-					case Util.FileTypes.HTML:
+					case FILE_TYPE.HTML:
 					default:
 						return parseHTML(file);
 				}
@@ -1102,33 +1097,39 @@ interface TypingsObj {
 	}
 }
 
+export const enum FILE_TYPE {
+	HTML = "html",
+	JADE = "pug",
+	PUG = "pug"
+}
+
 export function extractStringTypes(fileContents: string): string;
 export function extractStringTypes(fileContents: string, options: {
-	isPug?: boolean;
+	fileType?: FILE_TYPE;
 	getTypesObj?: null|false;
 	pugPath?: string;
 }): string;
 export function extractStringTypes(fileContents: string, options: {
-	isPug?: boolean;
+	fileType?: FILE_TYPE;
 	getTypesObj?: true;
 	pugPath?: string;
 }): TypingsObj;
 export function extractStringTypes(fileContents: string, options: {
-	isPug?: boolean;
+	fileType?: FILE_TYPE;
 	getTypesObj?: boolean|null;
 	pugPath?: string;
 	exportTypes?: boolean;
 } = {
-	isPug: false,
+	fileType: FILE_TYPE.HTML,
 	getTypesObj: false,
 	pugPath: null,
 	exportTypes: false
 }): string|TypingsObj {
-	const { isPug, getTypesObj, pugPath , exportTypes} = options;
+	const { fileType, getTypesObj, pugPath , exportTypes} = options;
 
 	const typings = Main.Conversion.Joining.mergeTypes({
 		'string': Main.Conversion.Extraction.getTypings(fileContents, 
-			pugPath, isPug ? Util.FileTypes.PUG : Util.FileTypes.HTML)
+			pugPath, fileType)
 	});
 	return getTypesObj ? typings : Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
 }
