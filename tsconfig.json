@@ -1,26 +1,25 @@
 {
-    "compilerOptions": {
-        "alwaysStrict": true,
-        "baseUrl": "./typings/",
-        "forceConsistentCasingInFileNames": true,
-        "module": "commonjs",
-        "noImplicitAny": true,
-        "noImplicitThis": true,
-        "removeComments": true,
-        "preserveConstEnums": false,
-        "listFiles": false,
-        "pretty": true,
-        "noFallthroughCasesInSwitch": true,
-        "noImplicitReturns": true,
-        "noUnusedLocals": true,
-        "target": "es6",
-        "experimentalDecorators": true
-	}, 
-    "allowJs": true,
-    "compileOnSave": true,
-    "include": [
-		"app/",
-        "test/test.ts",
-        "tasks/html-typings.ts"
-    ]
+	"compilerOptions": {
+		"alwaysStrict": true,
+		"baseUrl": "./typings/",
+		"forceConsistentCasingInFileNames": true,
+		"module": "commonjs",
+		"noImplicitAny": true,
+		"noImplicitThis": true,
+		"removeComments": true,
+		"preserveConstEnums": false,
+		"listFiles": false,
+		"pretty": true,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitReturns": true,
+		"noUnusedLocals": true,
+		"target": "es6",
+		"experimentalDecorators": true,
+		"jsx": "react",
+		"jsxFactory": "JSX.factory"
+	},
+	"allowJs": true,
+	"compileOnSave": true,
+	"include": ["app/", "test/", "tasks/html-typings.ts"],
+	"exclude": ["test/**/*.d.ts"]
 }

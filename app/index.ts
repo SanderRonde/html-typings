@@ -40,6 +40,9 @@ namespace Input {
 			'Separate the querymaps when given multiple input files. Will output the files alongside the input files',
 		action: 'storeTrue',
 	});
+	parser.addArgument(['-j', '--jsxfactory'], {
+		help: 'The jsx factory name',
+	});
 
 	export function parse(programArgs?: string[]) {
 		args = parser.parseArgs(programArgs);
@@ -51,6 +54,7 @@ namespace Input {
 		watch: boolean;
 		export: boolean;
 		separate: boolean;
+		jsxfactory: string;
 	};
 }
 
@@ -529,7 +533,7 @@ export type TagMapType = ${tagMap}`
 				}
 
 				interface AcornObjectExpression extends acorn.Node {
-					type: 'ObjectExpressions';
+					type: 'ObjectExpression';
 					properties: AcornNode[];
 				}
 
@@ -592,45 +596,63 @@ export type TagMapType = ${tagMap}`
 					node: AcornCallExpression
 				): {
 					id: string | null;
-					className: string | null;
-					elementType: string|null;
+					classNames: string | null;
+					elementType: string | null;
 				} {
 					const result: {
-						id: string|null,
-						className: string|null
-						elementType: string|null,
+						id: string | null;
+						classNames: string | null;
+						elementType: string | null;
 					} = {
 						id: null,
-						className: null,
+						classNames: null,
 						elementType: null,
-					}
+					};
 
 					const arg = node.arguments[1];
-					if (arg.type !== 'ObjectExpressions')
-						return result;
+					if (arg.type !== 'ObjectExpression') return result;
 					for (const prop of arg.properties) {
 						if (prop.type !== 'Property') continue;
 						if (
-							prop.value.type !== 'Identifier' ||
+							prop.value.type !== 'Literal' ||
 							prop.key.type !== 'Identifier'
 						)
 							continue;
 
 						if (prop.key.name === 'id') {
-							result.id = prop.value.name;
-						} else if (prop.key.name === 'class' || prop.key.name === 'className') {
-							result.className = prop.value.name;
+							result.id = prop.value.value;
+						} else if (
+							prop.key.name === 'class' ||
+							prop.key.name === 'className'
+						) {
+							result.classNames = prop.value.value;
 						} else if (prop.key.name === 'data-element-type') {
-							result.elementType = prop.value.name;
+							result.elementType = prop.value.value;
 						}
 					}
 
 					return result;
 				}
 
-				export function parseJSX(content: string, jsxFactory: string) {
-					const moduleNodeMap: Map<acorn.Node, string> = new Map();
+				function getDomModule(node: AcornNode, jsxFactory: string) {
+					if (node.type !== 'CallExpression') {
+						return null;
+					}
+					// Check if the callee is equal to jsxFactory
+					if (getCallee(node as AcornCallExpression) !== jsxFactory) {
+						return null;
+					}
 
+					// Get the tag name
+					const tagName = getTagName(node as AcornCallExpression);
+					if (!tagName || tagName !== 'dom-module') return null;
+
+					const { id } = getAttrs(node as AcornCallExpression);
+
+					return id;
+				}
+
+				export function parseJSX(content: string, jsxFactory: string) {
 					const maps: {
 						[moduleName: string]: {
 							ids: {
@@ -665,30 +687,55 @@ export type TagMapType = ${tagMap}`
 								);
 								if (!tagName) return;
 
-								const { className, id , elementType } = getAttrs(
-									node as AcornCallExpression
-								);
+								const {
+									classNames,
+									id,
+									elementType,
+								} = getAttrs(node as AcornCallExpression);
 
 								let mapKey: string = defaultKey;
-								for (const ancestor of [...ancestors].reverse()) {
-									if (moduleNodeMap.has(ancestor)) {
-										mapKey = moduleNodeMap.get(ancestor)!;
+								for (const ancestor of [
+									...ancestors,
+								].reverse()) {
+									const domModule = getDomModule(
+										ancestor as AcornNode,
+										jsxFactory
+									);
+									if (domModule) {
+										mapKey = domModule;
+
+										if (!maps[mapKey]) {
+											maps[mapKey] = {
+												ids: {},
+												classes: [],
+											};
+										}
 										break;
 									}
 								}
-								if (tagName === 'dom-module' && id) {
-									maps[id] = {
-										ids: {},
-										classes: []
+								if (tagName === 'template' && id) {
+									maps[mapKey].ids[`#${id}`] =
+										elementType || Constants.getTagType(id);
+								} else if (tagName !== 'dom-module' && id) {
+									maps[mapKey].ids[`#${id}`] =
+										elementType ||
+										Constants.getTagType(tagName);
+								}
+								if (classNames) {
+									for (const className of classNames.split(
+										' '
+									)) {
+										maps[mapKey].classes.push([
+											className,
+											elementType ||
+												Constants.getTagType(tagName),
+										]);
 									}
-									moduleNodeMap.set(node, id);
-								} else if (tagName === 'template' && id) {
-									// maps[mapKey].ids[`#${id}`] = 
 								}
 							}
 						}
 					);
-					return {};
+					return maps;
 				}
 			}
 
@@ -1069,11 +1116,12 @@ export type TagMapType = ${tagMap}`
 			export async function getSplitTypings(
 				input: string | string[],
 				files?: string[],
+				jsxFactory?: string,
 				splitTypings: {
 					[key: string]: ModuleMappingPartialTypingsObj;
 				} = {}
 			) {
-				files = files || (await Files.getInputFiles(input));
+				files = files.length ? files : await Files.getInputFiles(input);
 				files = files.sort();
 				const toSkip = Object.getOwnPropertyNames(splitTypings);
 				const contentsMap = await Files.readInputFiles(files, toSkip);
@@ -1086,7 +1134,8 @@ export type TagMapType = ${tagMap}`
 						return getTypings(
 							fileContent,
 							fileName,
-							Util.getFileType(fileName)
+							Util.getFileType(fileName),
+							jsxFactory
 						);
 					},
 					splitTypings
@@ -1095,9 +1144,14 @@ export type TagMapType = ${tagMap}`
 
 			export async function getTypingsForInput(
 				input: string | string[],
-				files?: string[]
+				files?: string[],
+				jsxFactory?: string
 			) {
-				const typingMaps = await getSplitTypings(input, files);
+				const typingMaps = await getSplitTypings(
+					input,
+					files,
+					jsxFactory
+				);
 				return Joining.mergeTypes(typingMaps);
 			}
 		}
@@ -1387,11 +1441,13 @@ async function doWatchCompilation(
 		[
 			key: string
 		]: Main.Conversion.Extraction.ModuleMappingPartialTypingsObj;
-	}
+	},
+	jsxFactory: string
 ) {
 	const splitTypings = await Main.Conversion.Extraction.getSplitTypings(
 		'',
 		files,
+		jsxFactory,
 		previousTypings
 	);
 	const joinedTypes = Main.Conversion.Joining.mergeTypes(splitTypings);
@@ -1401,9 +1457,9 @@ async function doWatchCompilation(
 	return splitTypings;
 }
 
-async function doSplitWatchCompilationAll(files: string[]) {
+async function doSplitWatchCompilationAll(files: string[], jsxFactory: string) {
 	const splitTypings = Main.Conversion.Joining.mergeModules(
-		await Main.Conversion.Extraction.getSplitTypings('', files)
+		await Main.Conversion.Extraction.getSplitTypings('', files, jsxFactory)
 	);
 	for (const keyPath in splitTypings) {
 		Main.Conversion.Extraction.writeToOutput(
@@ -1416,10 +1472,11 @@ async function doSplitWatchCompilationAll(files: string[]) {
 	return splitTypings;
 }
 
-async function doSingleFileWatchCompilation(file: string) {
+async function doSingleFileWatchCompilation(file: string, jsxFactory: string) {
 	const splitTypings = await Main.Conversion.Extraction.getTypingsForInput(
 		'',
-		[file]
+		[file],
+		jsxFactory
 	);
 	Main.Conversion.Extraction.writeToOutput(
 		splitTypings,
@@ -1487,27 +1544,36 @@ function main() {
 					delete splitTypings[changedFile];
 				}
 				if (Input.args.separate) {
-					await doSingleFileWatchCompilation(changedFile);
+					await doSingleFileWatchCompilation(
+						changedFile,
+						Input.args.jsxfactory
+					);
 				} else {
 					splitTypings = await doWatchCompilation(
 						files,
-						splitTypings
+						splitTypings,
+						Input.args.jsxfactory
 					);
 				}
 			});
 			if (Input.args.separate) {
-				await doSplitWatchCompilationAll(getWatched(watcher));
+				await doSplitWatchCompilationAll(
+					getWatched(watcher),
+					Input.args.jsxfactory
+				);
 			} else {
 				splitTypings = await doWatchCompilation(
 					getWatched(watcher),
-					{}
+					{},
+					Input.args.jsxfactory
 				);
 			}
 		} else {
 			(async () => {
 				if (Input.args.separate) {
 					return doSplitWatchCompilationAll(
-						await Files.getInputFiles(Input.args.input)
+						await Files.getInputFiles(Input.args.input),
+						Input.args.jsxfactory
 					);
 				} else {
 					return Main.Conversion.Extraction.extractTypesAndWrite();
@@ -1567,6 +1633,15 @@ export function extractStringTypes(
 export function extractStringTypes(
 	fileContents: string,
 	options: {
+		fileType?: FILE_TYPE;
+		getTypesObj?: null | false;
+		pugPath?: string;
+		jsxFactory?: string;
+	}
+): string;
+export function extractStringTypes(
+	fileContents: string,
+	options: {
 		fileType?: FILE_TYPE.COMPILED_JSX;
 		getTypesObj?: true;
 		pugPath?: string;
@@ -1612,15 +1687,44 @@ export function extractStringTypes(
 export async function extractGlobTypes(glob: string): Promise<string>;
 export async function extractGlobTypes(
 	glob: string,
+	options?: {
+		getTypesObj: true;
+		exportTypes?: boolean;
+		jsxFactory?: string;
+	}
+): Promise<TypingsObj>;
+export async function extractGlobTypes(
+	glob: string,
+	options?: {
+		getTypesObj: false | null;
+		exportTypes?: boolean;
+		jsxFactory?: string;
+	}
+): Promise<string>;
+export async function extractGlobTypes(
+	glob: string,
+	options?: {
+		exportTypes?: boolean;
+		jsxFactory?: string;
+	}
+): Promise<string>;
+export async function extractGlobTypes(
+	glob: string,
 	{
 		exportTypes = false,
 		getTypesObj = false,
+		jsxFactory,
 	}: {
 		getTypesObj?: boolean | null;
 		exportTypes?: boolean;
+		jsxFactory?: string;
 	} = {}
 ): Promise<string | TypingsObj> {
-	const typings = await Main.Conversion.Extraction.getTypingsForInput(glob);
+	const typings = await Main.Conversion.Extraction.getTypingsForInput(
+		glob,
+		[],
+		jsxFactory
+	);
 	return getTypesObj
 		? typings
 		: Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
@@ -1631,15 +1735,44 @@ export async function extractFileTypes(
 ): Promise<string>;
 export async function extractFileTypes(
 	files: string | string[],
+	options?: {
+		getTypesObj?: boolean | null;
+		exportTypes: true;
+		jsxFactory?: string;
+	}
+): Promise<TypingsObj>;
+export async function extractFileTypes(
+	files: string | string[],
+	options?: {
+		getTypesObj?: boolean | null;
+		exportTypes: false;
+		jsxFactory?: string;
+	}
+): Promise<string>;
+export async function extractFileTypes(
+	files: string | string[],
+	options?: {
+		getTypesObj?: boolean | null;
+		jsxFactory?: string;
+	}
+): Promise<string>;
+export async function extractFileTypes(
+	files: string | string[],
 	{
 		exportTypes = false,
 		getTypesObj = false,
+		jsxFactory,
 	}: {
 		getTypesObj?: boolean | null;
 		exportTypes?: boolean;
+		jsxFactory?: string;
 	} = {}
 ): Promise<string | TypingsObj> {
-	const typings = await Main.Conversion.Extraction.getTypingsForInput(files);
+	const typings = await Main.Conversion.Extraction.getTypingsForInput(
+		files,
+		[],
+		jsxFactory
+	);
 	return getTypesObj
 		? typings
 		: Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
@@ -1647,20 +1780,47 @@ export async function extractFileTypes(
 
 export async function extractFolderTypes(folder: string): Promise<string>;
 export async function extractFolderTypes(
+	files: string | string[],
+	options?: {
+		getTypesObj?: boolean | null;
+		exportTypes: true;
+		jsxFactory?: string;
+	}
+): Promise<TypingsObj>;
+export async function extractFolderTypes(
+	glob: string,
+	options?: {
+		getTypesObj?: boolean | null;
+		exportTypes: false;
+		jsxFactory?: string;
+	}
+): Promise<string>;
+export async function extractFolderTypes(
+	glob: string,
+	options?: {
+		getTypesObj?: boolean | null;
+		jsxFactory?: string;
+	}
+): Promise<string>;
+export async function extractFolderTypes(
 	folder: string,
 	{
 		exportTypes = false,
 		getTypesObj = false,
+		jsxFactory,
 	}: {
 		getTypesObj?: boolean | null;
 		exportTypes?: boolean;
+		jsxFactory?: string;
 	} = {}
 ): Promise<string | TypingsObj> {
 	folder = Util.endsWith(folder, '/') ? folder : `${folder}/`;
 	const typings = await Main.Conversion.Extraction.getTypingsForInput(
-		EXTENSIONS.map((extension) => {
+		(jsxFactory ? [...EXTENSIONS, 'js'] : EXTENSIONS).map((extension) => {
 			return `${folder}**/*.${extension}`;
-		})
+		}),
+		[],
+		jsxFactory
 	);
 	return getTypesObj
 		? typings

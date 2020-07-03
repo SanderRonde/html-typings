@@ -22,12 +22,28 @@ type Tests =
 	| 'standard'
 	| 'nested';
 
-function getFilesInDir(dirName: Tests, isPug: boolean = false): string[] {
-	const type = isPug ? 'pug' : 'html';
+function getFileExtension(fileType: FILE_TYPE) {
+	switch (fileType) {
+		case FILE_TYPE.HTML:
+			return 'html';
+		case FILE_TYPE.PUG:
+		case FILE_TYPE.JADE:
+			return 'pug';
+		case FILE_TYPE.COMPILED_JSX:
+			return 'js';
+	}
+}
+
+function getFilesInDir(dirName: Tests, fileType: FILE_TYPE): string[] {
 	return glob
-		.sync(`./test/programmatic/${type}/${dirName}/**/*.${type}`, {
-			absolute: true,
-		})
+		.sync(
+			`./test/programmatic/${fileType}/${dirName}/**/*.${getFileExtension(
+				fileType
+			)}`,
+			{
+				absolute: true,
+			}
+		)
 		.sort();
 }
 
@@ -49,20 +65,28 @@ const testMaps: {
 	};
 } = {
 	[FILE_TYPE.HTML]: {
-		'dom-module': getFilesInDir('dom-module'),
-		'empty-file': getFilesInDir('empty-file'),
-		multi: getFilesInDir('multi'),
-		none: getFilesInDir('none'),
-		standard: getFilesInDir('standard'),
-		nested: getFilesInDir('nested'),
+		'dom-module': getFilesInDir('dom-module', FILE_TYPE.HTML),
+		'empty-file': getFilesInDir('empty-file', FILE_TYPE.HTML),
+		multi: getFilesInDir('multi', FILE_TYPE.HTML),
+		none: getFilesInDir('none', FILE_TYPE.HTML),
+		standard: getFilesInDir('standard', FILE_TYPE.HTML),
+		nested: getFilesInDir('nested', FILE_TYPE.HTML),
 	},
 	[FILE_TYPE.PUG]: {
-		'dom-module': getFilesInDir('dom-module', true),
-		'empty-file': getFilesInDir('empty-file', true),
-		multi: getFilesInDir('multi', true),
-		none: getFilesInDir('none', true),
-		standard: getFilesInDir('standard', true),
-		nested: getFilesInDir('nested', true),
+		'dom-module': getFilesInDir('dom-module', FILE_TYPE.PUG),
+		'empty-file': getFilesInDir('empty-file', FILE_TYPE.PUG),
+		multi: getFilesInDir('multi', FILE_TYPE.PUG),
+		none: getFilesInDir('none', FILE_TYPE.PUG),
+		standard: getFilesInDir('standard', FILE_TYPE.PUG),
+		nested: getFilesInDir('nested', FILE_TYPE.PUG),
+	},
+	[FILE_TYPE.COMPILED_JSX]: {
+		'dom-module': getFilesInDir('dom-module', FILE_TYPE.COMPILED_JSX),
+		'empty-file': getFilesInDir('empty-file', FILE_TYPE.COMPILED_JSX),
+		multi: getFilesInDir('multi', FILE_TYPE.COMPILED_JSX),
+		none: getFilesInDir('none', FILE_TYPE.COMPILED_JSX),
+		standard: getFilesInDir('standard', FILE_TYPE.COMPILED_JSX),
+		nested: getFilesInDir('nested', FILE_TYPE.COMPILED_JSX),
 	},
 };
 
@@ -154,7 +178,12 @@ function doTest(name: Tests, fileType: FILE_TYPE) {
 		async function () {
 			this.slow(100);
 			results.glob = await extractGlobTypes(
-				`./test/programmatic/${fileType}/${name}/**/*.${fileType}`
+				`./test/programmatic/${fileType}/${name}/**/*.${getFileExtension(
+					fileType
+				)}`,
+				{
+					jsxFactory: 'JSX.factory',
+				}
 			);
 		}
 	);
@@ -163,13 +192,24 @@ function doTest(name: Tests, fileType: FILE_TYPE) {
 		step(
 			'should be able to run the main process using string-only input',
 			async () => {
-				results.string = await extractStringTypes(
-					await readFile(testMaps[fileType][name][0]),
-					{
-						fileType,
-						pugPath: testMaps[fileType][name][0],
-					}
-				);
+				debugger;
+				if (fileType !== FILE_TYPE.COMPILED_JSX) {
+					results.string = extractStringTypes(
+						await readFile(testMaps[fileType][name][0]),
+						{
+							fileType,
+							pugPath: testMaps[fileType][name][0],
+						}
+					);
+				} else {
+					results.string = extractStringTypes(
+						await readFile(testMaps[fileType][name][0]),
+						{
+							fileType: FILE_TYPE.COMPILED_JSX,
+							jsxFactory: 'JSX.factory',
+						}
+					);
+				}
 			}
 		);
 	}
@@ -177,14 +217,19 @@ function doTest(name: Tests, fileType: FILE_TYPE) {
 		'should be able to run the main process using folder input',
 		async () => {
 			results.folder = await extractFolderTypes(
-				path.join(__dirname, `./${fileType}/${name}/`)
+				path.join(__dirname, `./${fileType}/${name}/`),
+				{
+					jsxFactory: 'JSX.factory',
+				}
 			);
 		}
 	);
 	step(
 		'should be able to run the main process using file-only input',
 		async () => {
-			results.file = await extractFileTypes(testMaps[fileType][name]);
+			results.file = await extractFileTypes(testMaps[fileType][name], {
+				jsxFactory: 'JSX.factory',
+			});
 		}
 	);
 
@@ -223,15 +268,17 @@ function setupTest(name: Tests, fileType: FILE_TYPE) {
 
 export function programmaticTests() {
 	describe('Programmatic', () => {
-		[FILE_TYPE.HTML, FILE_TYPE.PUG].map((fileType) => {
-			describe(fileType, () => {
-				setupTest('standard', fileType);
-				setupTest('none', fileType);
-				setupTest('empty-file', fileType);
-				setupTest('dom-module', fileType);
-				setupTest('multi', fileType);
-				setupTest('nested', fileType);
-			});
-		});
+		[FILE_TYPE.HTML, FILE_TYPE.PUG, FILE_TYPE.COMPILED_JSX].map(
+			(fileType) => {
+				describe(fileType, () => {
+					setupTest('standard', fileType);
+					setupTest('none', fileType);
+					setupTest('empty-file', fileType);
+					setupTest('dom-module', fileType);
+					setupTest('multi', fileType);
+					setupTest('nested', fileType);
+				});
+			}
+		);
 	});
 }
