@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /// <reference path="../typings/gaze.d.ts"/>
+const acorn = require('acorn-loose') as typeof import('acorn');
 import { ArgumentParser } from 'argparse';
 import * as acornWalk from 'acorn-walk';
 import { Parser } from 'htmlparser2';
 import parse = require('pug-parser');
 import lex = require('pug-lexer');
-import * as acorn from 'acorn';
 import path = require('path');
 import { Gaze } from 'gaze';
 import { Glob } from 'glob';
@@ -672,7 +672,7 @@ export type TagMapType = ${tagMap}`
 						sourceType: 'module'
 					});
 					acornWalk.fullAncestor(
-						parsed,
+						parsed as any,
 						(node, _state, ancestors, type) => {
 							if (type === 'CallExpression') {
 								// Check if the callee is equal to jsxFactory
