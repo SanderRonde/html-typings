@@ -668,10 +668,12 @@ export type TagMapType = ${tagMap}`
 					};
 					const defaultKey = '__default__';
 
-					const parsed = acorn.parse(content);
+					const parsed = acorn.parse(content, {
+						sourceType: 'module'
+					});
 					acornWalk.fullAncestor(
 						parsed,
-						(node, state, ancestors, type) => {
+						(node, _state, ancestors, type) => {
 							if (type === 'CallExpression') {
 								// Check if the callee is equal to jsxFactory
 								if (
