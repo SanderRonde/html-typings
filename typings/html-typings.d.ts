@@ -31,6 +31,7 @@ interface HTMLTypings {
 	extractStringTypes(
 		fileContents: string,
 		options: {
+			exportTypes?: boolean;
 			fileType?: HTMLTypings.FILE_TYPE.COMPILED_JSX;
 			getTypesObj?: null | false;
 			pugPath?: string;
@@ -40,6 +41,7 @@ interface HTMLTypings {
 	extractStringTypes(
 		fileContents: string,
 		options: {
+			exportTypes?: boolean;
 			fileType?: HTMLTypings.FILE_TYPE;
 			getTypesObj?: null | false;
 			pugPath?: string;
@@ -49,6 +51,7 @@ interface HTMLTypings {
 	extractStringTypes(
 		fileContents: string,
 		options: {
+			exportTypes?: boolean;
 			fileType?: HTMLTypings.FILE_TYPE.COMPILED_JSX;
 			getTypesObj?: true;
 			pugPath?: string;
@@ -58,6 +61,7 @@ interface HTMLTypings {
 	extractStringTypes(
 		fileContents: string,
 		options: {
+			exportTypes?: boolean;
 			fileType?: HTMLTypings.FILE_TYPE;
 			getTypesObj?: true;
 			pugPath?: string;
@@ -259,6 +263,7 @@ declare namespace HTMLTypings {
 	export function extractStringTypes(
 		fileContents: string,
 		options: {
+			exportTypes?: boolean;
 			fileType?: FILE_TYPE.COMPILED_JSX;
 			getTypesObj?: null | false;
 			pugPath?: string;
@@ -268,6 +273,7 @@ declare namespace HTMLTypings {
 	export function extractStringTypes(
 		fileContents: string,
 		options: {
+			exportTypes?: boolean;
 			fileType?: FILE_TYPE;
 			getTypesObj?: null | false;
 			pugPath?: string;
@@ -277,6 +283,7 @@ declare namespace HTMLTypings {
 	export function extractStringTypes(
 		fileContents: string,
 		options: {
+			exportTypes?: boolean;
 			fileType?: FILE_TYPE.COMPILED_JSX;
 			getTypesObj?: true;
 			pugPath?: string;
@@ -286,6 +293,7 @@ declare namespace HTMLTypings {
 	export function extractStringTypes(
 		fileContents: string,
 		options: {
+			exportTypes?: boolean;
 			fileType?: FILE_TYPE;
 			getTypesObj?: true;
 			pugPath?: string;

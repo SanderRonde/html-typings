@@ -1636,6 +1636,7 @@ export function extractStringTypes(fileContents: string): string;
 export function extractStringTypes(
 	fileContents: string,
 	options: {
+		exportTypes?: boolean;
 		fileType?: FILE_TYPE.COMPILED_JSX;
 		getTypesObj?: null | false;
 		pugPath?: string;
@@ -1645,6 +1646,7 @@ export function extractStringTypes(
 export function extractStringTypes(
 	fileContents: string,
 	options: {
+		exportTypes?: boolean;
 		fileType?: FILE_TYPE;
 		getTypesObj?: null | false;
 		pugPath?: string;
@@ -1654,6 +1656,7 @@ export function extractStringTypes(
 export function extractStringTypes(
 	fileContents: string,
 	options: {
+		exportTypes?: boolean;
 		fileType?: FILE_TYPE.COMPILED_JSX;
 		getTypesObj?: true;
 		pugPath?: string;
@@ -1663,6 +1666,7 @@ export function extractStringTypes(
 export function extractStringTypes(
 	fileContents: string,
 	options: {
+		exportTypes?: boolean;
 		fileType?: FILE_TYPE;
 		getTypesObj?: true;
 		pugPath?: string;
