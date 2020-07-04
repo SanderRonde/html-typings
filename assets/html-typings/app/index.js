@@ -519,8 +519,10 @@ export type TagMapType = ${tagMap}`
                         },
                     };
                     const defaultKey = '__default__';
-                    const parsed = acorn.parse(content);
-                    acornWalk.fullAncestor(parsed, (node, state, ancestors, type) => {
+                    const parsed = acorn.parse(content, {
+                        sourceType: 'module'
+                    });
+                    acornWalk.fullAncestor(parsed, (node, _state, ancestors, type) => {
                         if (type === 'CallExpression') {
                             if (getCallee(node) !==
                                 jsxFactory) {
