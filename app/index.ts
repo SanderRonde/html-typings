@@ -1652,6 +1652,15 @@ export function extractStringTypes(
 	fileContents: string,
 	options: {
 		fileType?: FILE_TYPE;
+		getTypesObj?: true;
+		pugPath?: string;
+		jsxFactory?: string;
+	}
+): TypingsObj;
+export function extractStringTypes(
+	fileContents: string,
+	options: {
+		fileType?: FILE_TYPE;
 		getTypesObj?: boolean | null;
 		pugPath?: string;
 		exportTypes?: boolean;
