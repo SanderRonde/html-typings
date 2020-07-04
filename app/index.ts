@@ -669,7 +669,7 @@ export type TagMapType = ${tagMap}`
 					const defaultKey = '__default__';
 
 					const parsed = acorn.parse(content, {
-						sourceType: 'module'
+						sourceType: 'module',
 					});
 					acornWalk.fullAncestor(
 						parsed as any,
@@ -1087,7 +1087,10 @@ export type TagMapType = ${tagMap}`
 				});
 			}
 
-			export async function extractTypes(files?: string[]) {
+			export async function extractTypes(
+				files?: string[],
+				jsxFactory?: string
+			) {
 				const inFiles =
 					files || (await Files.getInputFiles(Input.args.input));
 				if (
@@ -1102,13 +1105,17 @@ export type TagMapType = ${tagMap}`
 				}
 				const typings = await getTypingsForInput(
 					Input.args.input,
-					inFiles
+					inFiles,
+					jsxFactory
 				);
 				return typings;
 			}
 
-			export async function extractTypesAndWrite(files?: string[]) {
-				const typings = await extractTypes(files);
+			export async function extractTypesAndWrite(
+				files?: string[],
+				jsxFactory?: string
+			) {
+				const typings = await extractTypes(files, jsxFactory);
 				return writeToOutput(
 					typings,
 					Input.args.output || Util.toQuerymapPath(files[0])
@@ -1578,7 +1585,10 @@ function main() {
 						Input.args.jsxfactory
 					);
 				} else {
-					return Main.Conversion.Extraction.extractTypesAndWrite();
+					return Main.Conversion.Extraction.extractTypesAndWrite(
+						undefined,
+						Input.args.jsxfactory
+					);
 				}
 			})()
 				.then(() => {
