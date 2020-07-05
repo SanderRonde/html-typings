@@ -1,7 +1,8 @@
-import { Gaze } from 'gaze';
+import { Extraction } from './main/conversion/extraction';
 import { Logging } from './logging';
 import { Util } from './util';
 import { Main } from './main';
+import { Gaze } from 'gaze';
 
 export namespace Watching {
 	export function watchFiles(
@@ -33,18 +34,18 @@ export namespace Watching {
 		previousTypings: {
 			[
 				key: string
-			]: Main.Conversion.Extraction.ModuleMappingPartialTypingsObj;
+			]: Extraction.ModuleMappingPartialTypingsObj;
 		},
 		jsxFactory: string
 	) {
-		const splitTypings = await Main.Conversion.Extraction.getSplitTypings(
+		const splitTypings = await Main.conversion.extraction.getSplitTypings(
 			'',
 			files,
 			jsxFactory,
 			previousTypings
 		);
-		const joinedTypes = Main.Conversion.Joining.mergeTypes(splitTypings);
-		Main.Conversion.Extraction.writeToOutput(joinedTypes).catch(() => {
+		const joinedTypes = Main.conversion.joining.mergeTypes(splitTypings);
+		Main.conversion.extraction.writeToOutput(joinedTypes).catch(() => {
 			Logging.exit(1);
 		});
 		return splitTypings;
@@ -54,15 +55,15 @@ export namespace Watching {
 		files: string[],
 		jsxFactory: string
 	) {
-		const splitTypings = Main.Conversion.Joining.mergeModules(
-			await Main.Conversion.Extraction.getSplitTypings(
+		const splitTypings = Main.conversion.joining.mergeModules(
+			await Main.conversion.extraction.getSplitTypings(
 				'',
 				files,
 				jsxFactory
 			)
 		);
 		for (const keyPath in splitTypings) {
-			Main.Conversion.Extraction.writeToOutput(
+			Main.conversion.extraction.writeToOutput(
 				splitTypings[keyPath],
 				Util.toQuerymapPath(keyPath)
 			).catch(() => {
@@ -76,12 +77,12 @@ export namespace Watching {
 		file: string,
 		jsxFactory: string
 	) {
-		const splitTypings = await Main.Conversion.Extraction.getTypingsForInput(
+		const splitTypings = await Main.conversion.extraction.getTypingsForInput(
 			'',
 			[file],
 			jsxFactory
 		);
-		Main.Conversion.Extraction.writeToOutput(
+		Main.conversion.extraction.writeToOutput(
 			splitTypings,
 			Util.toQuerymapPath(file)
 		).catch(() => {

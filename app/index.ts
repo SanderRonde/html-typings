@@ -11,6 +11,8 @@ export const enum FILE_TYPE {
 	JADE = 'pug',
 	PUG = 'pug',
 	COMPILED_JSX = 'jsx',
+	JSX = 'jsx',
+	TSX = 'tsx',
 }
 
 export function extractStringTypes(fileContents: string): string;
@@ -38,7 +40,7 @@ export function extractStringTypes(
 	fileContents: string,
 	options: {
 		exportTypes?: boolean;
-		fileType?: FILE_TYPE.COMPILED_JSX;
+		fileType?: FILE_TYPE.COMPILED_JSX | FILE_TYPE.TSX;
 		getTypesObj?: true;
 		pugPath?: string;
 		jsxFactory: string;
@@ -77,8 +79,8 @@ export function extractStringTypes(
 		);
 	}
 
-	const typings = Main.Conversion.Joining.mergeTypes({
-		string: Main.Conversion.Extraction.getTypings(
+	const typings = Main.conversion.joining.mergeTypes({
+		string: Main.conversion.extraction.getTypings(
 			fileContents,
 			pugPath,
 			fileType,
@@ -87,7 +89,7 @@ export function extractStringTypes(
 	});
 	return getTypesObj
 		? typings
-		: Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
+		: Main.conversion.joining.convertToDefsFile(typings, exportTypes);
 }
 
 export async function extractGlobTypes(glob: string): Promise<string>;
@@ -126,14 +128,14 @@ export async function extractGlobTypes(
 		jsxFactory?: string;
 	} = {}
 ): Promise<string | TypingsObj> {
-	const typings = await Main.Conversion.Extraction.getTypingsForInput(
+	const typings = await Main.conversion.extraction.getTypingsForInput(
 		glob,
 		[],
 		jsxFactory
 	);
 	return getTypesObj
 		? typings
-		: Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
+		: Main.conversion.joining.convertToDefsFile(typings, exportTypes);
 }
 
 export async function extractFileTypes(
@@ -174,14 +176,14 @@ export async function extractFileTypes(
 		jsxFactory?: string;
 	} = {}
 ): Promise<string | TypingsObj> {
-	const typings = await Main.Conversion.Extraction.getTypingsForInput(
+	const typings = await Main.conversion.extraction.getTypingsForInput(
 		files,
 		[],
 		jsxFactory
 	);
 	return getTypesObj
 		? typings
-		: Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
+		: Main.conversion.joining.convertToDefsFile(typings, exportTypes);
 }
 
 export async function extractFolderTypes(folder: string): Promise<string>;
@@ -221,16 +223,18 @@ export async function extractFolderTypes(
 	} = {}
 ): Promise<string | TypingsObj> {
 	folder = Util.endsWith(folder, '/') ? folder : `${folder}/`;
-	const typings = await Main.Conversion.Extraction.getTypingsForInput(
-		(jsxFactory ? [...EXTENSIONS, 'js'] : EXTENSIONS).map((extension) => {
-			return `${folder}**/*.${extension}`;
-		}),
+	const typings = await Main.conversion.extraction.getTypingsForInput(
+		(jsxFactory ? [...EXTENSIONS, 'js', 'tsx'] : EXTENSIONS).map(
+			(extension) => {
+				return `${folder}**/*.${extension}`;
+			}
+		),
 		[],
 		jsxFactory
 	);
 	return getTypesObj
 		? typings
-		: Main.Conversion.Joining.convertToDefsFile(typings, exportTypes);
+		: Main.conversion.joining.convertToDefsFile(typings, exportTypes);
 }
 
 type HTMLTypingsWindow = typeof window & {
