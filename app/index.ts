@@ -10,7 +10,7 @@ export const enum FILE_TYPE {
 	HTML = 'html',
 	JADE = 'pug',
 	PUG = 'pug',
-	COMPILED_JSX = 'jsx',
+	COMPILED_JSX = 'compiled-jsx',
 	JSX = 'jsx',
 	TSX = 'tsx',
 }
