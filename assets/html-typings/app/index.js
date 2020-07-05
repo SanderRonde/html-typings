@@ -477,25 +477,27 @@ export type TagMapType = ${tagMap}`
                         elementType: null,
                     };
                     const arg = node.arguments[1];
-                    if (arg.type !== 'ObjectExpression')
-                        return result;
-                    for (const prop of arg.properties) {
-                        if (prop.type !== 'Property')
-                            continue;
-                        if (prop.value.type !== 'Literal' ||
-                            prop.key.type !== 'Identifier')
-                            continue;
-                        if (prop.key.name === 'id') {
-                            result.id = prop.value.value;
+                    acornWalk.fullAncestor(arg, (childNode) => {
+                        if (childNode.type === 'ObjectExpression') {
+                            for (const prop of childNode.properties) {
+                                if (prop.type !== 'Property')
+                                    continue;
+                                if (prop.value.type !== 'Literal' ||
+                                    prop.key.type !== 'Identifier')
+                                    continue;
+                                if (prop.key.name === 'id') {
+                                    result.id = prop.value.value;
+                                }
+                                else if (prop.key.name === 'class' ||
+                                    prop.key.name === 'className') {
+                                    result.classNames = prop.value.value;
+                                }
+                                else if (prop.key.name === 'data-element-type') {
+                                    result.elementType = prop.value.value;
+                                }
+                            }
                         }
-                        else if (prop.key.name === 'class' ||
-                            prop.key.name === 'className') {
-                            result.classNames = prop.value.value;
-                        }
-                        else if (prop.key.name === 'data-element-type') {
-                            result.elementType = prop.value.value;
-                        }
-                    }
+                    });
                     return result;
                 }
                 function getDomModule(node, jsxFactory) {
