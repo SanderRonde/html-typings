@@ -610,26 +610,31 @@ export type TagMapType = ${tagMap}`
 					};
 
 					const arg = node.arguments[1];
-					if (arg.type !== 'ObjectExpression') return result;
-					for (const prop of arg.properties) {
-						if (prop.type !== 'Property') continue;
-						if (
-							prop.value.type !== 'Literal' ||
-							prop.key.type !== 'Identifier'
-						)
-							continue;
+					acornWalk.fullAncestor(arg, (childNode: AcornNode) => {
+						if (childNode.type === 'ObjectExpression') {
+							for (const prop of childNode.properties) {
+								if (prop.type !== 'Property') continue;
+								if (
+									prop.value.type !== 'Literal' ||
+									prop.key.type !== 'Identifier'
+								)
+									continue;
 
-						if (prop.key.name === 'id') {
-							result.id = prop.value.value;
-						} else if (
-							prop.key.name === 'class' ||
-							prop.key.name === 'className'
-						) {
-							result.classNames = prop.value.value;
-						} else if (prop.key.name === 'data-element-type') {
-							result.elementType = prop.value.value;
+								if (prop.key.name === 'id') {
+									result.id = prop.value.value;
+								} else if (
+									prop.key.name === 'class' ||
+									prop.key.name === 'className'
+								) {
+									result.classNames = prop.value.value;
+								} else if (
+									prop.key.name === 'data-element-type'
+								) {
+									result.elementType = prop.value.value;
+								}
+							}
 						}
-					}
+					});
 
 					return result;
 				}

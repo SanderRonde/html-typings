@@ -12,7 +12,13 @@ declare global {
 const x = () => (
 	<dom-module id="some-module">
 		<div id="someDivId" />
-		<div class="divClass" id="otherDivId" />
+		<div
+			class="divClass"
+			id="otherDivId"
+			{...{
+				other: 'attribute',
+			}}
+		/>
 		<image class="imgOrVideoClass" />
 		<video class="imgOrVideoClass" />
 		<div class="lotOfElementsClass" />
