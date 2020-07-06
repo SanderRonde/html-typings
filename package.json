@@ -1,6 +1,6 @@
 {
   "name": "html-typings",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "description": "Generates typings for your HTML files",
   "main": "app/index.js",
   "scripts": {
