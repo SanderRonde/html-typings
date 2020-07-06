@@ -232,6 +232,8 @@ declare namespace HTMLTypings {
 		JADE = 'pug',
 		PUG = 'pug',
 		COMPILED_JSX = 'jsx',
+		JSX = 'jsx',
+		TSX = 'tsx',
 	}
 
 	export interface TypingsObj {
