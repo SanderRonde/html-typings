@@ -38,7 +38,8 @@
     "glob": "^7.1.2",
     "htmlparser2": "^3.9.2",
     "pug-lexer": "^3.1.0",
-    "pug-parser": "^4.0.0"
+    "pug-parser": "^4.0.0",
+    "typescript": "^3.9.6"
   },
   "devDependencies": {
     "@types/acorn": "^4.0.5",
@@ -54,8 +55,7 @@
     "grunt-contrib-copy": "^1.0.0",
     "mocha": "5.2.0",
     "mocha-steps": "^1.1.0",
-    "monaco-editor": "^0.10.1",
-    "typescript": "^3.9.6"
+    "monaco-editor": "^0.10.1"
   },
   "typings": "typings/html-typings.d.ts"
 }
