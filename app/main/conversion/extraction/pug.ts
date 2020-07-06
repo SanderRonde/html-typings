@@ -1,8 +1,8 @@
 import parse = require('pug-parser');
 import lex = require('pug-lexer');
 import path = require('path');
-import fs = require('fs');
 import { HTML } from './html';
+import fs = require('fs');
 
 export namespace Pug {
 

@@ -31,6 +31,10 @@ function getFileExtension(fileType: FILE_TYPE) {
 			return 'pug';
 		case FILE_TYPE.COMPILED_JSX:
 			return 'js';
+		case FILE_TYPE.JSX:
+			return 'jsx';
+		case FILE_TYPE.TSX:
+			return 'tsx';
 	}
 }
 
@@ -87,6 +91,22 @@ const testMaps: {
 		none: getFilesInDir('none', FILE_TYPE.COMPILED_JSX),
 		standard: getFilesInDir('standard', FILE_TYPE.COMPILED_JSX),
 		nested: getFilesInDir('nested', FILE_TYPE.COMPILED_JSX),
+	},
+	[FILE_TYPE.JSX]: {
+		'dom-module': getFilesInDir('dom-module', FILE_TYPE.JSX),
+		'empty-file': getFilesInDir('empty-file', FILE_TYPE.JSX),
+		multi: getFilesInDir('multi', FILE_TYPE.JSX),
+		none: getFilesInDir('none', FILE_TYPE.JSX),
+		standard: getFilesInDir('standard', FILE_TYPE.JSX),
+		nested: getFilesInDir('nested', FILE_TYPE.JSX),
+	},
+	[FILE_TYPE.TSX]: {
+		'dom-module': getFilesInDir('dom-module', FILE_TYPE.TSX),
+		'empty-file': getFilesInDir('empty-file', FILE_TYPE.TSX),
+		multi: getFilesInDir('multi', FILE_TYPE.TSX),
+		none: getFilesInDir('none', FILE_TYPE.TSX),
+		standard: getFilesInDir('standard', FILE_TYPE.TSX),
+		nested: getFilesInDir('nested', FILE_TYPE.TSX),
 	},
 };
 
@@ -192,7 +212,6 @@ function doTest(name: Tests, fileType: FILE_TYPE) {
 		step(
 			'should be able to run the main process using string-only input',
 			async () => {
-				debugger;
 				if (fileType !== FILE_TYPE.COMPILED_JSX) {
 					results.string = extractStringTypes(
 						await readFile(testMaps[fileType][name][0]),
@@ -268,17 +287,21 @@ function setupTest(name: Tests, fileType: FILE_TYPE) {
 
 export function programmaticTests() {
 	describe('Programmatic', () => {
-		[FILE_TYPE.HTML, FILE_TYPE.PUG, FILE_TYPE.COMPILED_JSX].map(
-			(fileType) => {
-				describe(fileType, () => {
-					setupTest('standard', fileType);
-					setupTest('none', fileType);
-					setupTest('empty-file', fileType);
-					setupTest('dom-module', fileType);
-					setupTest('multi', fileType);
-					setupTest('nested', fileType);
-				});
-			}
-		);
+		[
+			FILE_TYPE.JSX,
+			FILE_TYPE.TSX,
+			FILE_TYPE.HTML,
+			FILE_TYPE.PUG,
+			FILE_TYPE.COMPILED_JSX,
+		].map((fileType) => {
+			describe(fileType, () => {
+				setupTest('standard', fileType);
+				setupTest('none', fileType);
+				setupTest('empty-file', fileType);
+				setupTest('dom-module', fileType);
+				setupTest('multi', fileType);
+				setupTest('nested', fileType);
+			});
+		});
 	});
 }

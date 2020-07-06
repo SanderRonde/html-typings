@@ -224,7 +224,7 @@ export async function extractFolderTypes(
 ): Promise<string | TypingsObj> {
 	folder = Util.endsWith(folder, '/') ? folder : `${folder}/`;
 	const typings = await Main.conversion.extraction.getTypingsForInput(
-		(jsxFactory ? [...EXTENSIONS, 'js', 'tsx'] : EXTENSIONS).map(
+		(jsxFactory ? [...EXTENSIONS, 'js', 'tsx', 'jsx'] : EXTENSIONS).map(
 			(extension) => {
 				return `${folder}**/*.${extension}`;
 			}
@@ -260,3 +260,5 @@ if (require.main === module) {
 		extractStringTypes: extractStringTypes,
 	};
 }
+
+export const cli = CLI.cli;

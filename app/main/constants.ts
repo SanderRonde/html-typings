@@ -19,14 +19,14 @@ ${prefix}interface ModuleMap ${moduleMap}
 ${prefix}interface TagMap ${tagMap}
 
 ${prefix}interface NodeSelector {
-querySelector<T extends keyof SelectorMap>(selector: T): SelectorMap[T];
-querySelectorAll<T extends keyof SelectorMap>(selector: T): SelectorMap[T][];
+	querySelector<T extends keyof SelectorMap>(selector: T): SelectorMap[T];
+	querySelectorAll<T extends keyof SelectorMap>(selector: T): SelectorMap[T][];
 }
 
 ${prefix}interface Document {
-getElementById<T extends keyof IDMap>(elementId: T): IDMap[T];
-getElementsByClassName<T extends keyof ClassMap>(classNames: string): HTMLCollectionOf<ClassMap[T]>
-getElementsByTagName<T extends keyof TagMap>(tagName: T): NodeListOf<TagMap[T]>;
+	getElementById<T extends keyof IDMap>(elementId: T): IDMap[T];
+	getElementsByClassName<T extends keyof ClassMap>(classNames: string): HTMLCollectionOf<ClassMap[T]>
+	getElementsByTagName<T extends keyof TagMap>(tagName: T): NodeListOf<TagMap[T]>;
 }
 ${
 doExport

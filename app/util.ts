@@ -40,6 +40,12 @@ export namespace Util {
 		if (endsWith(name, '.js')) {
 			return FILE_TYPE.COMPILED_JSX;
 		}
+		if (endsWith(name, '.jsx')) {
+			return FILE_TYPE.JSX;
+		}
+		if (endsWith(name, '.tsx')) {
+			return FILE_TYPE.TSX;
+		}
 		return FILE_TYPE.HTML;
 	}
 

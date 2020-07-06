@@ -9,6 +9,7 @@ import { Joining } from './joining';
 import { FILE_TYPE } from '../..';
 import { Util } from '../../util';
 import fs = require('fs');
+import { JSX } from './extraction/jsx';
 
 export namespace Extraction {
 	export interface PartialTypingsObj {
@@ -42,6 +43,9 @@ export namespace Extraction {
 				return Pug.parsePug(file, filePath);
 			case FILE_TYPE.COMPILED_JSX:
 				return CompiledJSX.parseJSX(file, jsxFactory);
+			case FILE_TYPE.JSX:
+			case FILE_TYPE.TSX:
+				return JSX.parseJSX(file, fileType === FILE_TYPE.TSX);
 			case FILE_TYPE.HTML:
 			default:
 				return HTML.parseHTML(file);
