@@ -113,8 +113,9 @@ export namespace JSX {
 						const attribute = attr as typescript.JsxAttribute;
 						const attrName = attribute.name.text;
 						if (
+							attribute.initializer &&
 							attribute.initializer.kind ===
-							typescript.SyntaxKind.StringLiteral
+								typescript.SyntaxKind.StringLiteral
 						) {
 							if (attrName === 'id') {
 								result.id = attribute.initializer.text;
