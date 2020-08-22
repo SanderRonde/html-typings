@@ -20,7 +20,8 @@ type Tests =
 	| 'multi'
 	| 'none'
 	| 'standard'
-	| 'nested';
+	| 'nested'
+	| 'webcomponents';
 
 function getFileExtension(fileType: FILE_TYPE) {
 	switch (fileType) {
@@ -65,7 +66,7 @@ function readFile(filePath: string): Promise<string> {
 
 const testMaps: {
 	[FT in FILE_TYPE]: {
-		[T in Tests]: string[];
+		[T in Tests]: string[] | null;
 	};
 } = {
 	[FILE_TYPE.HTML]: {
@@ -75,6 +76,7 @@ const testMaps: {
 		none: getFilesInDir('none', FILE_TYPE.HTML),
 		standard: getFilesInDir('standard', FILE_TYPE.HTML),
 		nested: getFilesInDir('nested', FILE_TYPE.HTML),
+		webcomponents: null,
 	},
 	[FILE_TYPE.PUG]: {
 		'dom-module': getFilesInDir('dom-module', FILE_TYPE.PUG),
@@ -83,6 +85,7 @@ const testMaps: {
 		none: getFilesInDir('none', FILE_TYPE.PUG),
 		standard: getFilesInDir('standard', FILE_TYPE.PUG),
 		nested: getFilesInDir('nested', FILE_TYPE.PUG),
+		webcomponents: null,
 	},
 	[FILE_TYPE.COMPILED_JSX]: {
 		'dom-module': getFilesInDir('dom-module', FILE_TYPE.COMPILED_JSX),
@@ -91,6 +94,7 @@ const testMaps: {
 		none: getFilesInDir('none', FILE_TYPE.COMPILED_JSX),
 		standard: getFilesInDir('standard', FILE_TYPE.COMPILED_JSX),
 		nested: getFilesInDir('nested', FILE_TYPE.COMPILED_JSX),
+		webcomponents: null,
 	},
 	[FILE_TYPE.JSX]: {
 		'dom-module': getFilesInDir('dom-module', FILE_TYPE.JSX),
@@ -99,6 +103,7 @@ const testMaps: {
 		none: getFilesInDir('none', FILE_TYPE.JSX),
 		standard: getFilesInDir('standard', FILE_TYPE.JSX),
 		nested: getFilesInDir('nested', FILE_TYPE.JSX),
+		webcomponents: getFilesInDir('webcomponents', FILE_TYPE.JSX),
 	},
 	[FILE_TYPE.TSX]: {
 		'dom-module': getFilesInDir('dom-module', FILE_TYPE.TSX),
@@ -107,6 +112,7 @@ const testMaps: {
 		none: getFilesInDir('none', FILE_TYPE.TSX),
 		standard: getFilesInDir('standard', FILE_TYPE.TSX),
 		nested: getFilesInDir('nested', FILE_TYPE.TSX),
+		webcomponents: getFilesInDir('webcomponents', FILE_TYPE.TSX),
 	},
 };
 
@@ -161,7 +167,7 @@ async function tsCompile(input: string) {
 					diagnostics.map(
 						({
 							code,
-							file: { fileName },
+							file,
 							category,
 							messageText,
 							source,
@@ -172,7 +178,7 @@ async function tsCompile(input: string) {
 							}
 							return {
 								code,
-								fileName,
+								fileName: (file && file.fileName) || '?',
 								category,
 								messageText,
 								source,
@@ -187,6 +193,9 @@ async function tsCompile(input: string) {
 }
 
 function doTest(name: Tests, fileType: FILE_TYPE) {
+	const testFiles = testMaps[fileType][name];
+	if (testFiles === null) return;
+
 	const results: {
 		string?: string;
 		glob?: string;
@@ -207,22 +216,22 @@ function doTest(name: Tests, fileType: FILE_TYPE) {
 			);
 		}
 	);
-	if (testMaps[fileType][name].length === 1) {
+	if (testFiles.length === 1) {
 		//Skip single-file tests if there are multiple files or none
 		step(
 			'should be able to run the main process using string-only input',
 			async () => {
 				if (fileType !== FILE_TYPE.COMPILED_JSX) {
 					results.string = extractStringTypes(
-						await readFile(testMaps[fileType][name][0]),
+						await readFile(testFiles[0]),
 						{
 							fileType,
-							pugPath: testMaps[fileType][name][0],
+							pugPath: testFiles[0],
 						}
 					);
 				} else {
 					results.string = extractStringTypes(
-						await readFile(testMaps[fileType][name][0]),
+						await readFile(testFiles[0]),
 						{
 							fileType: FILE_TYPE.COMPILED_JSX,
 							jsxFactory: 'JSX.factory',
@@ -246,7 +255,7 @@ function doTest(name: Tests, fileType: FILE_TYPE) {
 	step(
 		'should be able to run the main process using file-only input',
 		async () => {
-			results.file = await extractFileTypes(testMaps[fileType][name], {
+			results.file = await extractFileTypes(testFiles, {
 				jsxFactory: 'JSX.factory',
 			});
 		}
@@ -255,7 +264,7 @@ function doTest(name: Tests, fileType: FILE_TYPE) {
 	it('should have produced the same results for all input methods', () => {
 		let { string, glob, file, folder } = results;
 		//Set string to any other in case it's not set
-		if (testMaps[fileType][name].length !== 1) {
+		if (testFiles.length !== 1) {
 			string = glob;
 		}
 		assert.equal(string, glob, 'String and glob are equal');
@@ -275,7 +284,7 @@ function doTest(name: Tests, fileType: FILE_TYPE) {
 	it('should compile without errors', async function () {
 		this.timeout(20000);
 		this.slow(6000);
-		await tsCompile(results.glob);
+		await tsCompile(results.glob!);
 	});
 }
 
@@ -301,6 +310,7 @@ export function programmaticTests() {
 				setupTest('dom-module', fileType);
 				setupTest('multi', fileType);
 				setupTest('nested', fileType);
+				setupTest('webcomponents', fileType);
 			});
 		});
 	});

@@ -38,13 +38,13 @@ function captureLogs(program: {
 	});
 }
 
-function hasOutputted(filePath: string = path.join(__dirname, 'output.d.ts')): Promise<string> {
+function hasOutputted(filePath: string = path.join(__dirname, 'output.d.ts')): Promise<string|null> {
 	return new Promise((resolve) => {
-		fs.stat(filePath, async (err, stats) => {
+		fs.stat(filePath, async (err) => {
 			if (err) {
 				resolve(null);		
 			} else {
-				const content = await new Promise<string>((resolveRead) => {
+				const content = await new Promise<string|null>((resolveRead) => {
 					fs.readFile(filePath, 'utf8', (err, data) => {
 						if (err) {
 							resolveRead(null);
@@ -117,7 +117,7 @@ function wait(duration: number): Promise<void> {
 	});
 }
 
-function captureError(fn: (done?: MochaDone) => Promise<any>) {
+function captureError(fn: (done: MochaDone) => Promise<any>) {
 	return (done: MochaDone) => {
 		new Promise(async (resolve) => {
 			try {
@@ -205,28 +205,28 @@ export function cliTests() {
 					assert.equal(data.exitCode, 0, 'Exit code is 0');
 					const output = await hasOutputted();
 					assert.isTrue(!!output, 'Output file was generated');
-					assert.isTrue(output.indexOf('export') === -1, 'Has not exported types');
+					assert.isTrue(output!.indexOf('export') === -1, 'Has not exported types');
 				}));
 				it('should work when specifying an absolute file location', captureError(async () => {
 					const data = await captureLogs(cli(['-i', path.join(__dirname, 'html/cli.html'), '-o', 'test/cli/output.d.ts']));
 					assert.equal(data.exitCode, 0, 'Exit code is 0');
 					const output = await hasOutputted();
 					assert.isTrue(!!output, 'Output file was generated');
-					assert.isTrue(output.indexOf('export') === -1, 'Has not exported types');
+					assert.isTrue(output!.indexOf('export') === -1, 'Has not exported types');
 				}));
 				it('should work when specifying an absolute output location', captureError(async () => {
 					const data = await captureLogs(cli(['-i', path.join(__dirname, 'html/cli.html'), '-o', path.join(__dirname, 'output.d.ts')]));
 					assert.equal(data.exitCode, 0, 'Exit code is 0');
 					const output = await hasOutputted();
 					assert.isTrue(!!output, 'Output file was generated');
-					assert.isTrue(output.indexOf('export') === -1, 'Has not exported types');
+					assert.isTrue(output!.indexOf('export') === -1, 'Has not exported types');
 				}));
 				it('should work when the export flag is enabled', captureError(async () => {
 					const data = await captureLogs(cli(['-i', 'test/cli/html/cli.html', '-o', 'test/cli/output.d.ts', '-e']));
 					assert.equal(data.exitCode, 0, 'Exit code is 0');
 					const output = await hasOutputted();
 					assert.isTrue(!!output, 'Output file was generated');
-					assert.isTrue(output.indexOf('export') > -1, 'Has exported types');
+					assert.isTrue(output!.indexOf('export') > -1, 'Has exported types');
 				}));
 			});
 
@@ -399,8 +399,8 @@ export function cliTests() {
 				} = {};
 				for (const src of [filePath1, filePath2]) {
 					const outputContent = await hasOutputted(src.replace('.html', '-querymap.d.ts'));
-					outputs[src] = outputContent;
 					assert.isTrue(!!outputContent, 'Output file was generated');
+					outputs[src] = outputContent!;
 				}
 
 				//Change file

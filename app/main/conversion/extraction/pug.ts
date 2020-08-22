@@ -170,7 +170,7 @@ export namespace Pug {
 				return {
 					type: 'Block',
 					line: node.line,
-					filename: null,
+					filename: 'filename',
 					nodes: [],
 				};
 			}
