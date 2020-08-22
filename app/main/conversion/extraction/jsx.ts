@@ -60,7 +60,7 @@ export namespace JSX {
 		return program.getSourceFile(fileName);
 	}
 
-	function iterateChildren<S>(
+	function iterateChildren(
 		node: typescript.Node,
 		onChild: (node: typescript.Node) => boolean
 	) {
@@ -95,6 +95,9 @@ export namespace JSX {
 						: (childNode as typescript.JsxSelfClosingElement);
 
 				const tagName = jsxNode.tagName.getText();
+				const typeArgs = jsxNode.typeArguments?.map((typeArg) => {
+					return typeArg.getFullText();
+				}) || [];
 
 				const result: {
 					id: string | null;
@@ -169,7 +172,7 @@ export namespace JSX {
 
 				if (tagName === 'template' && result.id) {
 					maps[mapKey].ids[`#${result.id}`] =
-						result.elementType || Constants.getTagType(result.id);
+						result.elementType || Constants.getTagType(result.id, typeArgs);
 				} else if (tagName === 'dom-module' && result.id) {
 					maps[result.id] = maps[result.id] || {
 						classes: [],
@@ -181,13 +184,13 @@ export namespace JSX {
 					return false;
 				} else if (result.id) {
 					maps[mapKey].ids[`#${result.id}`] =
-						result.elementType || Constants.getTagType(tagName);
+						result.elementType || Constants.getTagType(tagName, typeArgs);
 				}
 				if (result.classNames) {
 					for (const className of result.classNames) {
 						maps[mapKey].classes.push([
 							className,
-							result.elementType || Constants.getTagType(tagName),
+							result.elementType || Constants.getTagType(tagName, typeArgs),
 						]);
 					}
 				}
@@ -215,6 +218,7 @@ export namespace JSX {
 		const defaultKey = '__default__';
 
 		const ast = getAST(content, isTS);
+		if (!ast) return maps;
 		extractChildren(ast, defaultKey, maps);
 
 		return maps;

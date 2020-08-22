@@ -36,9 +36,9 @@ export namespace Main {
 	export const conversion = Conversion;
 
 	export function main() {
-		let close: () => void = null;
+		let close: null | (() => void) = null;
 		(async () => {
-			let watcher: Gaze = null;
+			let watcher: Gaze | null = null;
 			close = () => {
 				watcher && watcher.close();
 				Logging.exit(0);
@@ -56,11 +56,13 @@ export namespace Main {
 					return;
 				}
 
-				let splitTypings: {
-					[
-						key: string
-					]: Extraction.ModuleMappingPartialTypingsObj;
-				} = null;
+				let splitTypings:
+					| {
+							[
+								key: string
+							]: Extraction.ModuleMappingPartialTypingsObj;
+					  }
+					| undefined = undefined;
 				let input = Input.args.input;
 				if (
 					Util.endsWith(Input.args.input, '/') ||
@@ -132,7 +134,7 @@ export namespace Main {
 		})();
 
 		return () => {
-			close();
+			close && close();
 		};
 	}
 }

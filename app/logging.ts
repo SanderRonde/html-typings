@@ -4,7 +4,7 @@ export namespace Logging {
 		exit(code: number): void;
 		error(...args: any[]): void;
 		log(...args: any[]): void;
-	} = null;
+	}|null = null;
 
 	export function handle(handlers: {
 		exit(code: number): void;
@@ -17,7 +17,7 @@ export namespace Logging {
 
 	export function exit(code: number = 0) {
 		if (reroute) {
-			listeners.exit(code);
+			listeners!.exit(code);
 		} else {
 			process.exit(code);
 		}
@@ -25,7 +25,7 @@ export namespace Logging {
 
 	export function error(...args: any[]) {
 		if (reroute) {
-			listeners.error(...args);
+			listeners!.error(...args);
 		} else {
 			console.error(...args);
 		}
@@ -33,7 +33,7 @@ export namespace Logging {
 
 	export function log(...args: any[]) {
 		if (reroute) {
-			listeners.log(...args);
+			listeners!.log(...args);
 		} else {
 			console.log(...args);
 		}

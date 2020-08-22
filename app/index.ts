@@ -67,7 +67,7 @@ export function extractStringTypes(
 	} = {
 		fileType: FILE_TYPE.HTML,
 		getTypesObj: false,
-		pugPath: null,
+		pugPath: undefined,
 		exportTypes: false,
 	}
 ): string | TypingsObj {
@@ -82,8 +82,8 @@ export function extractStringTypes(
 	const typings = Main.conversion.joining.mergeTypes({
 		string: Main.conversion.extraction.getTypings(
 			fileContents,
-			pugPath,
-			fileType,
+			pugPath!,
+			fileType!,
 			jsxFactory
 		),
 	});

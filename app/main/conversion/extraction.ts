@@ -34,6 +34,18 @@ export namespace Extraction {
 	export function getTypings(
 		file: string,
 		filePath: string,
+		fileType: FILE_TYPE.COMPILED_JSX,
+		jsxFactory: string
+	): ModuleMappingPartialTypingsObj;
+	export function getTypings(
+		file: string,
+		filePath: string,
+		fileType: FILE_TYPE,
+		jsxFactory?: string
+	): ModuleMappingPartialTypingsObj;
+	export function getTypings(
+		file: string,
+		filePath: string,
 		fileType: FILE_TYPE,
 		jsxFactory?: string
 	): ModuleMappingPartialTypingsObj {
@@ -42,7 +54,7 @@ export namespace Extraction {
 			case FILE_TYPE.JADE:
 				return Pug.parsePug(file, filePath);
 			case FILE_TYPE.COMPILED_JSX:
-				return CompiledJSX.parseJSX(file, jsxFactory);
+				return CompiledJSX.parseJSX(file, jsxFactory!);
 			case FILE_TYPE.JSX:
 			case FILE_TYPE.TSX:
 				return JSX.parseJSX(file, fileType === FILE_TYPE.TSX);
@@ -103,9 +115,12 @@ export namespace Extraction {
 		jsxFactory?: string
 	) {
 		const typings = await extractTypes(files, jsxFactory);
+		if (!Input.args.output && (!files || !files[0])) {
+			throw new Error('Missing output dir/file');
+		}
 		return writeToOutput(
 			typings,
-			Input.args.output || Util.toQuerymapPath(files[0])
+			Input.args.output || Util.toQuerymapPath(files![0])
 		);
 	}
 
@@ -117,7 +132,7 @@ export namespace Extraction {
 			[key: string]: ModuleMappingPartialTypingsObj;
 		} = {}
 	) {
-		files = files.length ? files : await Files.getInputFiles(input);
+		files = files?.length ? files : await Files.getInputFiles(input);
 		files = files.sort();
 		const toSkip = Object.getOwnPropertyNames(splitTypings);
 		const contentsMap = await Files.readInputFiles(files, toSkip);

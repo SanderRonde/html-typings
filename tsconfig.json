@@ -16,10 +16,18 @@
 		"target": "es6",
 		"experimentalDecorators": true,
 		"jsx": "react",
-		"jsxFactory": "JSX.factory"
+		"jsxFactory": "JSX.factory",
+		"noUnusedParameters": true,
+		"strictPropertyInitialization": true,
+		"strictNullChecks": true,
+		"strictBindCallApply": true
 	},
 	"allowJs": true,
 	"compileOnSave": true,
 	"include": ["app/", "test/", "tasks/html-typings.ts"],
-	"exclude": ["test/**/*.d.ts", "test/programmatic/jsx", "test/programmatic/tsx"]
+	"exclude": [
+		"test/**/*.d.ts",
+		"test/programmatic/jsx",
+		"test/programmatic/tsx"
+	]
 }

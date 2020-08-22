@@ -9,7 +9,7 @@ export namespace Watching {
 		input: string,
 		callback: (changedFile: string, files: string[]) => void
 	) {
-		const gaze = new Gaze(input, {}, (err, watcher) => {
+		const gaze = new Gaze(input, {}, (err) => {
 			if (err) {
 				Logging.error(err);
 				Logging.exit(1);
@@ -35,7 +35,7 @@ export namespace Watching {
 			[
 				key: string
 			]: Extraction.ModuleMappingPartialTypingsObj;
-		},
+		}|undefined,
 		jsxFactory: string
 	) {
 		const splitTypings = await Main.conversion.extraction.getSplitTypings(

@@ -33,17 +33,26 @@ interface StepTest extends IRunnable {
 	timeout(n: number): this;
 	parent: StepSuite;
 	pending: boolean;
-	state: 'failed'|'passed'|undefined;
+	state: 'failed' | 'passed' | undefined;
 
 	fullTitle(): string;
 }
 
 interface StepTest {
-	(expectation: string, callback?: (this: StepCallbackContext, done: MochaDone) => any): StepTest;
-	only(expectation: string, callback?: (this: StepCallbackContext, done: MochaDone) => any): StepTest;
-	skip(expectation: string, callback?: (this: StepCallbackContext, done: MochaDone) => any): void;
+	(
+		expectation: string,
+		callback?: (this: StepCallbackContext, done: MochaDone) => any
+	): StepTest;
+	only(
+		expectation: string,
+		callback?: (this: StepCallbackContext, done: MochaDone) => any
+	): StepTest;
+	skip(
+		expectation: string,
+		callback?: (this: StepCallbackContext, done: MochaDone) => any
+	): void;
 	timeout(ms: number): void;
-	state: "failed" | "passed";
+	state: 'failed' | 'passed' | undefined;
 }
 
 declare var step: StepTest;
