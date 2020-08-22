@@ -77,7 +77,7 @@ export namespace HTML {
 
 	export function parseHTML(content: string) {
 		const handler = new ParserHandler();
-		const parser = new Parser(handler.genObj());
+		const parser = new Parser(handler.genObj() as any);
 
 		parser.write(content);
 		parser.end();
