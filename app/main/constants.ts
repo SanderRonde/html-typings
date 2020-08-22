@@ -180,8 +180,6 @@ export type TagMapType = ${tagMap}`
 			}
 		})();
 		if (typeArgs && typeArgs.length) {
-			console.log(base, typeArgs)
-			console.log(`${base}<${typeArgs.join(',')}>`)
 			return `${base}<${typeArgs.join(',')}>`;
 		}
 		return base;
