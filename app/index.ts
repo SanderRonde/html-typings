@@ -6,7 +6,7 @@ import { CLI } from './cli';
 
 const EXTENSIONS = ['html', 'pug', 'jade'];
 
-export const enum FILE_TYPE {
+export enum FILE_TYPE {
 	HTML = 'html',
 	JADE = 'pug',
 	PUG = 'pug',
