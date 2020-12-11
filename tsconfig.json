@@ -20,7 +20,8 @@
 		"noUnusedParameters": true,
 		"strictPropertyInitialization": true,
 		"strictNullChecks": true,
-		"strictBindCallApply": true
+		"strictBindCallApply": true,
+		"isolatedModules": true
 	},
 	"allowJs": true,
 	"compileOnSave": true,
